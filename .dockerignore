@@ -19,8 +19,21 @@ docker/
 
 # ── Docs ────────────────────────────────────────────────────────────────────
 *.md
+*.html
 LICENSE
 docs/
+
+# ── Tooling config: used by CI and by humans, never by the image ───────────
+# Verified with a probe build (`COPY . /ctx` + `find`) rather than assumed —
+# these had been slipping into the context because they were added to the repo
+# after this file was first written. repo-guide.html alone was 94 KB of context
+# transferred on every build for nothing.
+scripts/
+trivy.yaml
+.yamllint.yml
+.dockerignore
+.gitattributes
+.editorconfig
 
 # ── Secrets & local state: must never reach the build context ──────────────
 .env

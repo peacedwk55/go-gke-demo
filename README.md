@@ -76,6 +76,21 @@ attacker gets the ability to make a reviewable, revertible commit — not cluste
 Every directory has its own `README.md` covering the decisions specific to it. This file covers what
 spans them.
 
+### File-by-file walkthrough
+
+[`repo-guide.html`](repo-guide.html) — a standalone page describing **every** folder and file in the
+repository, top to bottom, with what each does and why it exists. Open it directly in a browser; it
+has no dependencies and needs no build step.
+
+Useful when the question is "what is this file for?" rather than "how do I run this?". It also
+collects, in one place, the failure modes in this stack that are silent — a misplaced
+`.dockerignore`, `ignoreDifferences` without `RespectIgnoreDifferences`, a Workload Identity pool
+without `GKE_METADATA`, `docker_container` without `comparisons: strict` — each of which looks
+configured and does nothing.
+
+It is excluded from the Docker build context (see `.dockerignore`); at 94 KB it would otherwise be
+transferred to the daemon on every build for no reason.
+
 ---
 
 ## Quickstart

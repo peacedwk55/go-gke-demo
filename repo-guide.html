@@ -1,0 +1,1104 @@
+<title>96 ไฟล์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────────
+   จานสี: ทองแดง + สนิมทองแดง บนพื้นสเลต
+   ทองแดงคือสีของโครงสร้างพื้นฐานจริง — สายไฟ ท่อ บัสบาร์ — และสนิมเขียว
+   (verdigris) คือสิ่งที่ทองแดงกลายเป็น เป็นคู่วัสดุจริง ใช้เป็น accent + "ผ่าน"
+   สีกลางเอียงไปทางฟ้าอมเทาเล็กน้อย ให้อ่านว่าเลือกมา ไม่ใช่ค่าดีฟอลต์
+
+   ตัวอักษร: Anuphan (หัวข้อ) + IBM Plex Sans Thai (เนื้อหา) + IBM Plex Mono (โค้ด)
+   line-height สูงกว่าปกติ เพราะไทยมีวรรณยุกต์บนและสระล่างที่ต้องการที่หายใจ
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --ground:      #F1F4F5;
+  --surface:     #FFFFFF;
+  --surface-2:   #F7F9FA;
+  --ink:         #171C20;
+  --ink-soft:    #3A464E;
+  --muted:       #66757D;
+  --faint:       #93A2AA;
+  --rule:        #DBE2E6;
+  --rule-soft:   #E9EEF0;
+  --copper:      #A85B27;
+  --copper-wash: #FBF0E7;
+  --verdigris:   #1F6E60;
+  --verd-wash:   #E7F2EF;
+  --shadow:      0 1px 2px rgba(23,28,32,.05), 0 8px 24px -12px rgba(23,28,32,.14);
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans Thai", "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", "Leelawadee UI", sans-serif;
+  --disp: "Anuphan", "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #12171A;
+    --surface:     #191F23;
+    --surface-2:   #1E252A;
+    --ink:         #E6ECEF;
+    --ink-soft:    #C4CFD5;
+    --muted:       #8B9BA3;
+    --faint:       #6B7C85;
+    --rule:        #2B343A;
+    --rule-soft:   #232B31;
+    --copper:      #E09A63;
+    --copper-wash: #2A211A;
+    --verdigris:   #5FBCA8;
+    --verd-wash:   #172724;
+    --shadow:      0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #12171A;
+  --surface:     #191F23;
+  --surface-2:   #1E252A;
+  --ink:         #E6ECEF;
+  --ink-soft:    #C4CFD5;
+  --muted:       #8B9BA3;
+  --faint:       #6B7C85;
+  --rule:        #2B343A;
+  --rule-soft:   #232B31;
+  --copper:      #E09A63;
+  --copper-wash: #2A211A;
+  --verdigris:   #5FBCA8;
+  --verd-wash:   #172724;
+  --shadow:      0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  /* ไทยต้องการ line-height สูง วรรณยุกต์กับสระจะไม่ชนบรรทัดข้างเคียง */
+  line-height: 1.82;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--copper); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+a:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 40px) 96px;
+}
+
+/* ── หัวเรื่องหลัก ─────────────────────────────────────────────────────── */
+header.masthead {
+  padding: clamp(40px, 7vw, 76px) 0 34px;
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  gap: 20px;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--copper);
+}
+h1 {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: clamp(36px, 6.4vw, 64px);
+  /* ไทยที่ขนาดใหญ่ต้องการช่องไฟบรรทัดมากกว่าละติน */
+  line-height: 1.18;
+  letter-spacing: -.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.standfirst {
+  font-size: clamp(16.5px, 2vw, 19px);
+  line-height: 1.72;
+  color: var(--ink-soft);
+  max-width: 58ch;
+  margin: 0;
+}
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  width: fit-content;
+  max-width: 100%;
+}
+.stat {
+  padding: 11px 20px;
+  border-right: 1px solid var(--rule);
+  display: grid;
+  gap: 0;
+}
+.stat:last-child { border-right: 0; }
+.stat b {
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.stat span {
+  font-size: 11.5px;
+  color: var(--faint);
+  line-height: 1.5;
+}
+
+/* ── โครงหน้า ──────────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 60px);
+  align-items: start;
+  padding-top: 44px;
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+
+/* ── สารบัญด้านข้าง ────────────────────────────────────────────────────── */
+nav.rail {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding-right: 6px;
+}
+@media (max-width: 900px) {
+  nav.rail {
+    position: static;
+    max-height: none;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+}
+.rail-title {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 12px;
+}
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.rail a {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--ink-soft);
+  border-left: 2px solid transparent;
+}
+.rail a:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+  border-left-color: var(--copper);
+}
+.rail a i {
+  font-style: normal;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── แต่ละโฟลเดอร์ ─────────────────────────────────────────────────────── */
+section.folder {
+  padding-top: 8px;
+  margin-bottom: 60px;
+  scroll-margin-top: 20px;
+}
+.f-head { display: grid; gap: 13px; margin-bottom: 22px; }
+.f-tags { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.tag {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  background: var(--surface);
+  line-height: 1.7;
+}
+.tag.task {
+  color: var(--copper);
+  border-color: color-mix(in srgb, var(--copper) 34%, transparent);
+  background: var(--copper-wash);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+h2 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.35;
+  letter-spacing: -.012em;
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+h2 .slash { color: var(--copper); }
+.f-why { margin: 0; color: var(--ink-soft); max-width: 66ch; }
+
+/* ── รายการไฟล์ ────────────────────────────────────────────────────────── */
+.files {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.file {
+  display: grid;
+  grid-template-columns: minmax(0, 250px) minmax(0, 1fr);
+  gap: 6px 24px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--rule-soft);
+}
+.file:first-child { border-top: 0; }
+@media (max-width: 660px) {
+  .file { grid-template-columns: minmax(0, 1fr); padding: 14px 15px; }
+}
+.f-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.f-name em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.f-desc {
+  color: var(--ink-soft);
+  font-size: 15.5px;
+  line-height: 1.78;
+}
+.f-desc p { margin: 0; }
+.f-desc p + p { margin-top: 9px; }
+.f-desc strong { color: var(--ink); font-weight: 600; }
+code {
+  font-family: var(--mono);
+  font-size: .84em;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  padding: .1em .34em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.f-desc code, .f-why code, .standfirst code, .note code, .step code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--copper);
+}
+
+.group {
+  padding: 10px 20px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--rule-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  line-height: 1.6;
+}
+
+/* ── กล่องหมายเหตุ ─────────────────────────────────────────────────────── */
+.note {
+  margin: 18px 0 0;
+  padding: 14px 18px;
+  border-left: 2px solid var(--copper);
+  background: var(--copper-wash);
+  border-radius: 0 5px 5px 0;
+  font-size: 15.5px;
+  line-height: 1.78;
+  color: var(--ink-soft);
+}
+.note b { color: var(--ink); }
+.note.ok { border-left-color: var(--verdigris); background: var(--verd-wash); }
+.note p { margin: 0; }
+.note p + p { margin-top: 9px; }
+
+/* ── ปิดท้าย ───────────────────────────────────────────────────────────── */
+.closing {
+  margin-top: 20px;
+  padding-top: 36px;
+  border-top: 1px solid var(--rule);
+}
+.closing h2 {
+  font-family: var(--disp);
+  font-size: clamp(23px, 3vw, 30px);
+  line-height: 1.32;
+  letter-spacing: -.005em;
+  margin-bottom: 16px;
+}
+.order {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.step {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--rule-soft);
+  align-items: baseline;
+}
+.step:first-child { border-top: 0; }
+.step b {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--copper);
+}
+.step span { color: var(--ink-soft); font-size: 15.5px; line-height: 1.75; }
+
+footer {
+  margin-top: 44px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 12.5px;
+  color: var(--faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+</style>
+
+<div class="shell">
+
+<header class="masthead">
+  <div class="eyebrow">Repository walkthrough</div>
+  <h1>96 ไฟล์</h1>
+  <p class="standfirst">
+    ทุกโฟลเดอร์ ทุกไฟล์ในรีโป Go-on-GKE เรียงจากบนลงล่าง — แต่ละไฟล์คืออะไร
+    และมีไว้ทำไม ลำดับตามโครงสร้างไฟล์จริง เลข Task ตามลำดับการสร้างใน
+    <code>CLAUDE.md</code>
+  </p>
+  <div class="stats">
+    <div class="stat"><b>96</b><span>ไฟล์</span></div>
+    <div class="stat"><b>9</b><span>Task (0–8)</span></div>
+    <div class="stat"><b>8</b><span>README</span></div>
+    <div class="stat"><b>3</b><span>commit</span></div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <nav class="rail" aria-label="สารบัญโฟลเดอร์">
+    <div class="rail-title">สารบัญ</div>
+    <ol>
+      <li><a href="#root">/ root<i>9</i></a></li>
+      <li><a href="#app">app/<i>9</i></a></li>
+      <li><a href="#docker">docker/<i>2</i></a></li>
+      <li><a href="#k8s">k8s/<i>14</i></a></li>
+      <li><a href="#infra">infra/terraform/<i>16</i></a></li>
+      <li><a href="#argocd">argocd/<i>5</i></a></li>
+      <li><a href="#obs">observability/<i>10</i></a></li>
+      <li><a href="#gha">.github/workflows/<i>2</i></a></li>
+      <li><a href="#ansible">ansible/<i>24</i></a></li>
+      <li><a href="#scripts">scripts/<i>1</i></a></li>
+      <li><a href="#order">ลำดับที่ควรอ่าน</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <!-- ═══════════════════════════════ ROOT ═══════════════════════════════ -->
+  <section class="folder" id="root">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag">ระดับบนสุด</span><span class="tag">9 ไฟล์</span></div>
+      <h2><span class="slash">/</span></h2>
+      <p class="f-why">
+        ไฟล์ตั้งค่าที่ <em>ต้อง</em> อยู่ระดับบนสุดถึงจะถูกอ่าน สามไฟล์ในนี้สำคัญกว่าที่เห็น:
+        Docker อ่าน <code>.dockerignore</code> จาก root ของ build context เท่านั้น
+        Git อ่าน <code>.gitattributes</code> จาก root ของ repo เท่านั้น
+        และทั้งคู่ <strong>ล้มเหลวแบบเงียบ ๆ</strong> ถ้าวางผิดที่
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">CLAUDE.md<em>426 บรรทัด</em></div>
+        <div class="f-desc"><p>ตัวสเปก เก็บ design decision, ข้อตกลง และ Definition-of-Done ต่อ Task ทุกอย่างที่เหลือในรีโปต้องตอบไฟล์นี้ได้ ดังนั้นถ้าโค้ดกับไฟล์นี้ขัดกัน หมายความว่าอันใดอันหนึ่งเป็นบั๊ก</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>391 บรรทัด</em></div>
+        <div class="f-desc"><p>สิ่งที่ผู้ตรวจอ่านก่อน: แผนภาพสถาปัตยกรรม (Mermaid), แผนที่รีโป, quickstart เรียงตามลำดับพึ่งพา, decision ที่ครอบหลายส่วน, ตารางผลตรวจที่วัดจริง และหัวข้อ trade-off ที่บอกตรง ๆ ว่าอะไรยังไม่ได้ทำและเพราะอะไร</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">.dockerignore<em>59 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>กัน VCS, เอกสาร, ทุกโฟลเดอร์ infra, ไฟล์เทสต์ และทุกอย่างที่มีรูปร่างเหมือน credential ออกจาก build context</p>
+          <p><strong>ต้องอยู่ที่นี่ ไม่ใช่ใน <code>docker/</code></strong> เพราะ build context คือ root ของรีโป และ Docker อ่านไฟล์นี้จาก root ของ context เท่านั้น ถ้าวางใน <code>docker/</code> มันจะถูกเมินโดยไม่มีคำเตือน — build สำเร็จ แต่ส่งทั้งรีโปเข้า daemon</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">.gitignore<em>89 บรรทัด</em></div>
+        <div class="f-desc"><p>กัน secret, kubeconfig, Terraform state และ <code>*.tfvars</code> สังเกตบรรทัดที่มี <code>!</code> นำหน้า: <code>*.tfvars.example</code> กับ <code>.terraform.lock.hcl</code> จงใจ <em>เก็บ</em> ไว้ — lock file คือสิ่งที่ pin เวอร์ชันและ checksum ของ provider</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">.gitattributes<em>55 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><code>* text=auto eol=lf</code> พร้อมกฎเฉพาะสำหรับทุกนามสกุลในรีโป</p>
+          <p><strong>นี่คือไฟล์เรื่องความถูกต้อง ไม่ใช่เรื่องสไตล์</strong> เครื่องที่พัฒนามี <code>core.autocrlf=true</code> ระดับ system ถ้าไม่มีกฎพวกนี้ clone ใหม่บน Windows จะได้ CRLF แล้วค่าใน <code>config.env</code> จะกลายเป็น <code>"5s\r"</code> → <code>time.ParseDuration</code> พัง pod crash-loop ส่วน systemd unit ที่ template ออกมาจะโหลดไม่ได้เลย</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">.trivyignore<em>51 บรรทัด</em></div>
+        <div class="f-desc"><p>ยกเว้นไว้ 2 รายการ เป็น false positive ทั้งคู่ แต่ละรายการมีเจ้าของ เหตุผล และ <strong>วันหมดอายุ</strong> ส่วน vulnerability ไม่มีเลย — นั่นเป็นผลที่วัดได้ ไม่ใช่หัวข้อที่ยังเขียนไม่เสร็จ ส่วนหัวไฟล์เขียนกฎที่ทำให้ไฟล์นี้ไม่เน่า: รายการที่หมดอายุคือบั๊ก ไม่ใช่สิ่งที่ต่ออายุไปเรื่อย ๆ</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">trivy.yaml<em>45 บรรทัด</em></div>
+        <div class="f-desc"><p>ตั้งค่า scanner และส่วนใหญ่เป็นคำเตือน มันบันทึกไว้ว่าการสแกน IaC <strong>ต้อง</strong> รันบน manifest ที่ render แล้ว เพราะถ้าชี้ไปที่ <code>k8s/</code> ตรง ๆ Trivy จะอ่าน Kustomize patch fragment เป็น Deployment เต็ม ๆ แล้วฟ้อง HIGH ผิด ๆ 2 รายการ</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">.yamllint.yml<em>28 บรรทัด</em></div>
+        <div class="f-desc"><p>ผ่อนเรื่องความสวยงาม แต่เข้มตรงที่ YAML เปลี่ยนความหมาย — กฎ <code>truthy</code> ปฏิเสธ <code>yes/no/on/off</code> ซึ่ง YAML 1.1 อ่านเป็น boolean แต่ 1.2 ไม่ ในไฟล์ Kubernetes ความกำกวมนั้นคือบั๊กจริง ส่วน dashboard ถูกยกเว้นเพราะเป็น JSON ที่เครื่องสร้าง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">app/ · docker/ · k8s/ · infra/<br>argocd/ · observability/<br>.github/ · ansible/ · scripts/<em>9 โฟลเดอร์</em></div>
+        <div class="f-desc"><p>แต่ละโฟลเดอร์มี <code>README.md</code> ของตัวเอง อธิบาย decision ที่เป็นเรื่องเฉพาะของมัน README ที่ root อธิบายเฉพาะเรื่องที่ครอบหลายโฟลเดอร์</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ APP ════════════════════════════════ -->
+  <section class="folder" id="app">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 0</span><span class="tag">Go source</span><span class="tag">9 ไฟล์</span></div>
+      <h2>app<span class="slash">/</span></h2>
+      <p class="f-why">
+        ตัวแอป ของที่ได้มาคือ handler <code>hello</code> เดียวบน <code>DefaultServeMux</code> —
+        ไม่มี probe ไม่มี metrics ไม่มี trace ไม่จับ SIGTERM และมีช่องโหว่ reflected XSS
+        ทุกอย่างที่เพิ่มในนี้มีเพราะ Task ถัด ๆ ไปต้องใช้ ซึ่งเป็นเหตุผลที่มันกลายเป็น
+        Task 0 ไม่ใช่งานเสริมที่ทำก็ได้ไม่ทำก็ได้
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">main.go<em>153 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>การเริ่มระบบ การจับสัญญาณ และ <code>drain()</code> — ลำดับปิดตัว 4 ขั้นที่ทำให้ <code>maxUnavailable: 0</code> มีความหมายจริง</p>
+          <p>ลำดับคือ readiness พลิกเป็น 503 → รอ ~5 วินาทีให้ kube-proxy ถอด pod ออกจาก EndpointSlice → <code>srv.Shutdown</code> ระบาย request ที่ค้าง → flush OTLP exporter สลับขั้น 1 กับ 3 หรือตัดช่วงรอทิ้ง จะทำให้ request หลุดทุกครั้งที่ rollout แต่ยังผ่านการทดสอบแบบผ่าน ๆ</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">config.go<em>127 บรรทัด</em></div>
+        <div class="f-desc"><p>env → <code>Config</code> ตามหลัก 12-factor คืน error เมื่อค่าอ่านไม่ได้ ไม่ตกกลับไปใช้ค่าดีฟอลต์เงียบ ๆ เพราะการพิมพ์ผิดใน ConfigMap ควรทำให้ได้ <code>CrashLoopBackOff</code> พร้อมข้อความชัด ไม่ใช่ pod ที่รันอยู่เงียบ ๆ ด้วยค่าที่ไม่มีใครเลือก</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">server.go<em>178 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>route, middleware และ handler ใช้ <code>GET /{$}</code> สำหรับ root — ตัว <code>{$}</code> คือคำตอบของปัญหา catch-all <code>/</code> เดิม ที่จะตอบ <code>/healthz</code> และ <code>/readyz</code> ด้วย <code>200 Hello</code> ทำให้ probe ทั้ง 3 ตัวผ่านโดยไม่ได้ทดสอบอะไรเลย</p>
+          <p><code>writePlain()</code> ตั้ง <code>text/plain</code> กับ <code>nosniff</code> ทุก response — ถ้าไม่มี Go จะเดา content type จาก body แล้ว body ที่ขึ้นต้นด้วย <code>&lt;</code> จะถูกเสิร์ฟเป็น HTML ทำให้ <code>?name=&lt;script&gt;</code> รันได้</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">telemetry.go<em>133 บรรทัด</em></div>
+        <div class="f-desc"><p>Prometheus registry ส่วนตัวพร้อม RED metrics และการต่อ OpenTelemetry/OTLP ค่า latency แนบ <code>trace_id</code> เป็น exemplar — นั่นคือลิงก์ metric→trace ใน Grafana ถ้า OTLP endpoint ว่าง tracing จะปิดตัวเองแทนที่จะ error ทำให้ image เดียวกันรันด้วย <code>docker run</code> ได้โดยไม่ต้องมี collector</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">server_test.go<em>179 บรรทัด</em></div>
+        <div class="f-desc"><p>9 เทสต์ สองตัวถูกระบุไว้ใน contract: header <code>nosniff</code> และ <code>/readyz</code> ต้องคืน 503 เมื่อได้รับสัญญาณปิด ส่วน <code>TestDrainOrdering</code> เปิด listener จริงแล้วยืนยันว่า readiness fail <em>ระหว่าง</em> ที่ listener ยังรับ connection อยู่ — ทดสอบคุณสมบัติ ไม่ใช่ implementation</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">listener_test.go<em>12 บรรทัด</em></div>
+        <div class="f-desc"><p>helper ตัวเดียว: จอง loopback port ว่างให้เทสต์ที่ต้องใช้เซิร์ฟเวอร์จริง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">go.mod<em>38 บรรทัด</em></div>
+        <div class="f-desc"><p>Go <strong>1.26</strong> ของเดิมเขียน 1.21.4 ซึ่งหมด support แล้ว — และ <code>prometheus/client_golang</code> ตอนนี้ต้องการ ≥1.25 อยู่ดี ดังนั้นการบัมพ์เป็นทั้งเรื่องบังคับและเรื่องที่ถูกต้อง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">go.sum<em>79 บรรทัด</em></div>
+        <div class="f-desc"><p>checksum ของ dependency น่าพูดถึงเพราะแอปเดิม <em>ไม่มี</em> dependency เลย จึงไม่มี <code>go.sum</code> — คำสั่ง <code>COPY go.mod go.sum</code> ในสเปกจะทำให้ build ล้มทันที จนกว่า contract จะบังคับให้มี dependency จริง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>164 บรรทัด</em></div>
+        <div class="f-desc"><p>เหตุผลว่าทำไมแต่ละอย่างที่เพิ่มเป็นเรื่องบังคับ ลำดับ drain พร้อมตัวเลขที่วัดได้ และเหตุผลเบื้องหลัง route label ที่ฮาร์ดโค้ด, registry ส่วนตัว, และการที่ liveness ไม่แตะ dependency เลย</p></div>
+      </div>
+    </div>
+
+    <div class="note ok">
+      <p><b>วัดแล้ว</b> เทสต์ผ่าน 9/9 ภายใต้ <code>-race</code> ซึ่งสำคัญเป็นพิเศษ เพราะ readiness flag ถูกเขียนจาก goroutine ที่จับสัญญาณ และถูกอ่านจาก goroutine ที่รับ request พร้อมกัน</p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ DOCKER ═══════════════════════════════ -->
+  <section class="folder" id="docker">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 1–2</span><span class="tag">2 ไฟล์</span></div>
+      <h2>docker<span class="slash">/</span></h2>
+      <p class="f-why">
+        Multi-stage build ไปเป็น distroless runtime ส่วน <code>.dockerignore</code>
+        ที่ตามความหมายควรอยู่โฟลเดอร์นี้ ถูกวางไว้ที่ root ของรีโป เพราะนั่นคือที่เดียวที่ Docker มองหา
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">Dockerfile<em>103 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><code>golang:1.26-bookworm</code> ใช้ build; <code>distroless/static-debian12:nonroot</code> ใช้รัน — <strong>pin ด้วย digest</strong> เพราะ <code>:nonroot</code> เป็น tag ที่ขยับได้ และคำว่า "pin ทุกเวอร์ชัน" ไร้ความหมายถ้า base image เปลี่ยนใต้เท้าเราได้</p>
+          <p><code>CGO_ENABLED=0 -trimpath -ldflags="-s -w"</code>, <code>USER 65532</code> และมี assert ตอน build ว่า binary เป็น static — ถ้าเป็น dynamic มันจะ compile ผ่านแล้วไปพังตอนรันบน distroless ด้วยข้อความ "no such file or directory" ที่ชวนให้เข้าใจผิด</p>
+          <p>ไม่มี <code>HEALTHCHECK</code> เพราะทุกรูปแบบของมันต้องเรียก shell และ image นี้ไม่มี shell เรื่องสุขภาพเป็นหน้าที่ของ Kubernetes</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>111 บรรทัด</em></div>
+        <div class="f-desc"><p>ทุกทางเลือกพร้อมเหตุผลในตาราง คำสั่ง build/push ที่ใช้จริง การแยกสอง registry และผลที่วัดได้ — รวมถึงการยืนยันในเครื่องว่า <code>exec /bin/sh</code> ล้มเหลว</p></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>กับดักที่ควรเล่ารายละเอียด</b> ตอนแรกเขียน check static-link เป็น <code>ldd … | grep -q</code> ซึ่งโดน hadolint DL4006 — แล้วการใส่ <code>-o pipefail</code> เพื่อแก้ กลับ <em>ทำให้ check พัง</em>: <code>ldd</code> คืน exit non-zero พอดีตอนที่ไฟล์ไม่ใช่ dynamic executable ซึ่งคือกรณีสำเร็จ สุดท้ายเขียนใหม่โดยไม่ใช้ pipe เลย</p>
+    </div>
+    <div class="note ok">
+      <p><b>วัดแล้ว</b> 29 MB · รันเป็น <code>65532</code> · ไม่มี shell · static · Trivy HIGH+CRITICAL: <strong>0</strong> · hadolint: <strong>0</strong></p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ K8S ═════════════════════════════════ -->
+  <section class="folder" id="k8s">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 3</span><span class="tag">Kustomize</span><span class="tag">14 ไฟล์</span></div>
+      <h2>k8s<span class="slash">/</span></h2>
+      <p class="f-why">
+        <code>base/</code> คือนิยาม workload ที่ไม่ผูกกับ environment — ไม่เอ่ยชื่อ environment,
+        project, registry หรือ image tag เลย ส่วน overlay เก็บแต่ส่วนต่าง
+        ผลในทางปฏิบัติคือ งานที่ทำทุกวันไม่ต้องแตะ <code>base/</code>
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="group">base/ — นิยาม workload ที่เป็นกลาง</div>
+      <div class="file">
+        <div class="f-name">base/deployment.yaml<em>161 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><strong>ไม่มี <code>spec.replicas</code> โดยเจตนา</strong> ฟิลด์นี้ + HPA + ArgoCD <code>selfHeal</code> คือการชนกันสามทาง: HPA scale ขึ้น 4, ArgoCD กดกลับ 2, HPA scale ขึ้นอีก วนไม่จบ ที่นี่ให้ HPA เป็นเจ้าของเพียงผู้เดียว และ <code>minReplicas: 2</code> คือที่อยู่จริงของ HA baseline</p>
+          <p><code>maxUnavailable: 0</code>, <code>terminationGracePeriodSeconds: 30</code>, securityContext ครบทั้งระดับ pod <em>และ</em> container, anti-affinity กระจายข้าม node, topology spread กระจายข้าม zone, probe 3 ตัวที่หน้าที่แตกต่างกันจริง และ <code>/tmp</code> emptyDir จำกัดขนาด ซึ่ง <code>readOnlyRootFilesystem</code> ทำให้จำเป็น</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">base/hpa.yaml<em>41 บรรทัด</em></div>
+        <div class="f-desc"><p>2–6 replica ที่ CPU 70% ของ <em>request</em> ไม่ใช่ของ limit ซึ่งเป็นอีกเหตุผลที่ container ไม่มี CPU limit ตั้ง stabilization ตอน scale ขึ้น 30 วินาที ตอนลง 300 วินาที เพราะการลบ pod สร้างผลกระทบ และการมี replica เกินมา 1 ตัวเป็นเวลา 5 นาที ถูกกว่าการแกว่งไปมา</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">base/pdb.yaml<em>23 บรรทัด</em></div>
+        <div class="f-desc"><p><code>minAvailable: 1</code> เทียบกับพื้น HPA ที่ 2 ทำให้ยอมให้ evict ได้ 1 ตัวเสมอ comment ในไฟล์เขียนกับดักไว้ชัด: <code>minAvailable: 2</code> จะยอมให้ evict <em>ศูนย์</em> ตัวเมื่ออยู่ที่พื้น แล้วทำให้ drain, node upgrade และ scale-down ค้างถาวร — และ <code>50%</code> ปัดขึ้นเป็น 2 ซึ่งเจอปัญหาเดียวกัน</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">base/service.yaml<em>19 บรรทัด</em></div>
+        <div class="f-desc"><p><code>ClusterIP</code> ไม่ใช่ <code>LoadBalancer</code> ซึ่งเป็นทางลัดที่มีอยู่: external IP ที่คิดเงิน เสิร์ฟ HTTP เปล่า ไม่มี policy อะไรกั้นข้างหน้า</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">base/serviceaccount.yaml<em>15 บรรทัด</em></div>
+        <div class="f-desc"><p><code>automountServiceAccountToken: false</code> — แอปไม่เคยเรียก Kubernetes API เลย ถ้า mount token ไว้ก็เท่ากับยื่น cluster credential ให้ใครก็ตามที่ทำ RCE ได้ฟรี ๆ และไม่กระทบ Workload Identity ซึ่งใช้ metadata server ไม่ใช่ projected token</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">base/kustomization.yaml<em>25 บรรทัด</em></div>
+        <div class="f-desc"><p>ใช้ <code>labels:</code> พร้อม <code>includeSelectors: false</code> ไม่ใช่ <code>commonLabels:</code> ที่เลิกใช้แล้ว เพราะ selector แก้ไม่ได้หลังสร้าง ถ้า transformer เขียนลงไปในนั้น การเปลี่ยน label ในอนาคตจะกลายเป็นการลบแล้วสร้างใหม่</p></div>
+      </div>
+
+      <div class="group">overlays/prod/ — สิ่งที่รันจริง</div>
+      <div class="file">
+        <div class="f-name">overlays/prod/kustomization.yaml<em>70 บรรทัด</em></div>
+        <div class="f-desc"><p>ที่เดียวที่เขียน image tag และเป็นบรรทัดเดียวที่ CI แก้ จงใจเก็บไว้ในรูปแบบ output ของ <code>kustomize edit</code> ล่วงหน้า เพื่อให้ commit ที่ CI สร้างเป็น diff บรรทัดเดียวจริง ๆ ไม่ใช่การจัดย่อหน้าใหม่ทั้งไฟล์</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/config.env<em>31 บรรทัด</em></div>
+        <div class="f-desc"><p>ไฟล์ที่ developer แก้ทุกวัน <code>configMapGenerator</code> แปลงเป็น ConfigMap ที่มี hash ต่อท้ายชื่อ ซึ่งทำให้ pod spec เปลี่ยนและ pod หมุนเองอัตโนมัติ — การแก้ config จึงเดินทางผ่านเส้นทางเดียวกับการแก้โค้ด คือ review ได้ ย้อนได้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/namespace.yaml<em>14 บรรทัด</em></div>
+        <div class="f-desc"><p>ติด label Pod Security Standard ระดับ <strong>restricted</strong> workload ผ่านเกณฑ์อยู่แล้ว ดังนั้นอันนี้ไม่มีต้นทุน แต่เปลี่ยน securityContext จาก "ธรรมเนียมที่ตกลงกัน" เป็น "การรับประกันตอน admission"</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/servicemonitor.yaml<em>48 บรรทัด</em></div>
+        <div class="f-desc"><p>อยู่แค่ใน overlay ไม่ใช่ <code>base/</code> เพราะ CRD <code>monitoring.coreos.com</code> มีเฉพาะที่ติดตั้ง Prometheus Operator ถ้าอยู่ใน <code>base/</code> จะทำให้ <code>kustomize build overlays/dev</code> พังบน kind cluster เปล่า ๆ</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/patches/<br>resources.yaml<em>19 บรรทัด</em></div>
+        <div class="f-desc"><p>ขนาดสำหรับ prod: CPU 200m, memory 256Mi โดย request เท่ากับ limit (ได้ QoS class Guaranteed) และยังไม่มี CPU limit เหมือนเดิม</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/patches/<br>hpa-scale.yaml<em>11 บรรทัด</em></div>
+        <div class="f-desc"><p>ขอบเขตการ scale — ไฟล์ที่ต้องแก้ถ้าจะเปลี่ยน capacity เพราะ <code>spec.replicas</code> ไม่มีอยู่</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">overlays/prod/patches/<br>serviceaccount-wi.yaml<em>18 บรรทัด</em></div>
+        <div class="f-desc"><p>annotation เดียว และเป็นคำตอบทั้งหมดของ "deploy โดยไม่ inject key" <code>iam.gke.io/gcp-service-account</code> คือลิงก์เดียวที่ workload ต้องมี GKE อ่านมันแล้วส่ง token อายุสั้นให้ pod</p></div>
+      </div>
+
+      <div class="group">overlays/dev/ + เอกสาร</div>
+      <div class="file">
+        <div class="f-name">overlays/dev/<em>4 ไฟล์ · 87 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><code>kustomization.yaml</code>, <code>config.env</code>, <code>namespace.yaml</code>, <code>patches/hpa-scale.yaml</code> ดึง image จาก Docker Hub ตรง ๆ เพราะ kind cluster ไม่มีทั้งคอขวด Cloud NAT และ GCP credential</p>
+          <p>dev คง <code>minReplicas: 2</code> และช่วง drain 5 วินาทีเต็มไว้โดยเจตนา ถ้าลดอันใดอันหนึ่ง dev จะกลายเป็น environment เดียวที่คณิตศาสตร์ของ PDB และคำสัญญา zero-downtime ไม่เคยถูกทดสอบจริง</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>170 บรรทัด</em></div>
+        <div class="f-desc"><p>decision ทั้งหมดข้างบนพร้อมเหตุผล คณิตศาสตร์ของ PDB ที่กางออกมาให้เห็น และตารางผลจากการรันบนคลัสเตอร์จริง</p></div>
+      </div>
+    </div>
+
+    <div class="note ok">
+      <p><b>วัดบนคลัสเตอร์จริง</b> rollout สะอาดที่ 2/2 · pod ลงคนละ node · HPA ดันจาก 1→2 ใน ~5 วินาที <em>โดยที่ไม่มี metrics-server อยู่เลย</em> · PDB ยอมให้ evict 1 ตัว · restricted PSS ปฏิเสธ pod ที่ <code>kubectl run</code> ขึ้นมาสด ๆ ขณะที่ pod ของแอปผ่านฉลุย</p>
+      <p>และตัวชูโรง: <strong>8,017 request ระหว่าง rolling update ภายใต้โหลด ล้มเหลว 0</strong> เทียบกับล้มเหลว 15 ครั้งเมื่อตั้ง drain delay ไว้ 1 วินาที ความต่างนั้นคือเหตุผลทั้งหมดของลำดับ drain</p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ INFRA ════════════════════════════════ -->
+  <section class="folder" id="infra">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 4</span><span class="tag">Terraform</span><span class="tag">16 ไฟล์</span></div>
+      <h2>infra/terraform<span class="slash">/</span></h2>
+      <p class="f-why">
+        คลัสเตอร์ GKE แบบ regional, private, VPC-native พร้อม Workload Identity
+        สามโมดูลรับ input แล้วคืน output ส่วน root module ต่อเข้าด้วยกัน
+        ลำดับ apply จึงมาจากการไหลของข้อมูล ไม่ใช่รายการ dependency ที่ต้องดูแลด้วยมือ
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="group">envs/prod/ — ที่เดียวที่รัน terraform</div>
+      <div class="file">
+        <div class="f-name">envs/prod/main.tf<em>149 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>pin provider <code>~&gt; 6.0</code>, เปิด API ที่ต้องใช้ 7 ตัวก่อนที่อะไรจะเรียกใช้ และเรียกโมดูลทั้งสาม</p>
+          <p>สร้าง <strong>Artifact Registry remote repository</strong> ด้วย — เป็น cache แบบ read-through ของ Docker Hub เพราะ private node ทุกตัวออกเน็ตผ่าน Cloud NAT IP เดียว การดึงจาก Docker Hub ตรง ๆ จึงแบ่ง rate limit ต่อ IP กันทั้งคลัสเตอร์ rollout ที่รีสตาร์ท pod เก้าโหนดอาจใช้หมด และอาการที่ได้คือ <code>ImagePullBackOff</code> กับ 429 กลางการ deploy</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">envs/prod/variables.tf<em>124 บรรทัด</em></div>
+        <div class="f-desc"><p>ทุก input พร้อมเหตุผล <code>master_authorized_networks</code> ไม่มีค่าดีฟอลต์ เพราะค่าดีฟอลต์ตรงนี้จะไม่ปลอดภัย หรือไม่ก็ล็อกตัวเองออกจากคลัสเตอร์</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">envs/prod/outputs.tf<em>47 บรรทัด</em></div>
+        <div class="f-desc"><p>การส่งมอบให้ชั้น workload: คำสั่ง <code>get-credentials</code>, บรรทัด KSA annotation ที่ถูกต้องเป๊ะ, path ที่ AR ใช้ดึง image และคำสั่ง <code>kustomize edit set image</code> พร้อมคัดลอก — เพื่อให้สองครึ่งของ Workload Identity binding ไม่หลุดกันเพราะพิมพ์ผิด</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">envs/prod/backend.tf<em>31 บรรทัด</em></div>
+        <div class="f-desc"><p>state บน GCS พร้อม locking bucket ต้องมีอยู่ก่อน <code>init</code> เพราะ Terraform สร้าง backend ของตัวเองไม่ได้ และต้องเปิด versioning ซึ่งเป็นสิ่งที่ทำให้ apply ที่ผิดพลาดกู้กลับได้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">envs/prod/<br>terraform.tfvars.example<em>48 บรรทัด</em></div>
+        <div class="f-desc"><p>commit ไฟล์นี้ ส่วน <code>terraform.tfvars</code> ตัวจริงไม่ commit เพราะมี project id กับ IP บ้าน มีคำสั่ง <code>curl ifconfig.me</code> เตือนไว้ และลำดับ teardown สองขั้น</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">envs/prod/<br>.terraform.lock.hcl<em>22 บรรทัด</em></div>
+        <div class="f-desc"><p>เวอร์ชันและ checksum ของ provider — <code>hashicorp/google v6.50.0</code> commit โดยเจตนา (ดูบรรทัด <code>!</code> ใน <code>.gitignore</code>) เพราะนี่คือสิ่งที่ทำให้ build ทำซ้ำได้</p></div>
+      </div>
+
+      <div class="group">modules/gke/ — คลัสเตอร์และ node pool</div>
+      <div class="file">
+        <div class="f-name">modules/gke/main.tf<em>273 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><code>location = region</code> คือสวิตช์ทั้งหมดที่ทำให้เป็น regional cluster ถ้าไม่มีอันนี้ การกระจาย pod ข้าม zone ใน Deployment ก็ไร้ความหมาย</p>
+          <p><code>datapath_provider = "ADVANCED_DATAPATH"</code> และ <strong>ไม่มี block <code>network_policy</code></strong> เพราะสองอันนี้ใช้ร่วมกันไม่ได้ GKE จะปฏิเสธคลัสเตอร์ที่ตั้งทั้งคู่ ประโยค "เปิด network policy และ Dataplane V2" เป็นสิ่งที่เขียนสเปกได้ง่ายแต่ apply ไม่ได้</p>
+          <p>node pool ตั้ง <code>workload_metadata_config = GKE_METADATA</code> ถ้าไม่ตั้ง Workload Identity ระดับคลัสเตอร์จะเป็นแค่ของประดับ — pod จะอ่าน metadata server ดิบ ๆ และได้ identity ของ <em>node</em> ไป</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/gke/variables.tf<em>133 บรรทัด</em></div>
+        <div class="f-desc"><p>ขนาด node พร้อมเหตุผล และ validation 2 ข้อบน <code>master_authorized_networks</code>: ต้องไม่ว่าง และ <strong>ปฏิเสธ <code>0.0.0.0/0</code></strong> เพื่อให้การตั้งค่าผิดที่แย่ที่สุดของ GKE ใส่เข้ามาทาง tfvars ไม่ได้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/gke/outputs.tf<em>31 บรรทัด</em></div>
+        <div class="f-desc"><p>ชื่อคลัสเตอร์ region workload pool และบรรทัด <code>get-credentials</code> พร้อมรัน ส่วน endpoint กับ CA ทำเครื่องหมาย <code>sensitive</code> ไว้ เพื่อไม่ให้ไปโผล่ใน log ของ CI</p></div>
+      </div>
+
+      <div class="group">modules/iam/ — คำตอบของ "ไม่ใช้ key"</div>
+      <div class="file">
+        <div class="f-name">modules/iam/main.tf<em>119 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>Node SA ที่มีสิทธิ์เพียง 5 role — ไม่ใช้ Compute Engine default ซึ่งถือ <code>roles/editor</code> ทั้งโปรเจกต์ ทำให้ container escape ครั้งเดียวกลายเป็นการยึดโปรเจกต์ทั้งใบ</p>
+          <p>แล้วสร้าง app GSA และ binding เดียวที่ตอบเงื่อนไขของโจทย์: <code>roles/iam.workloadIdentityUser</code> บน <code>serviceAccount:&lt;project&gt;.svc.id.goog[prod/go-sample-app]</code> ใช้ <code>_iam_member</code> ไม่ใช่ <code>_iam_binding</code> เพราะตัวหลังเป็น authoritative และจะลบ binding ที่ Terraform ไม่รู้จักออกเงียบ ๆ</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/iam/variables.tf<em>44 บรรทัด</em></div>
+        <div class="f-desc"><p>namespace และชื่อ KSA ซึ่งต้องตรงกับ workload เป๊ะ ๆ ไม่งั้น binding จะดูเหมือนถูกแต่ไม่อนุญาตอะไรเลย ส่วน <code>app_roles</code> ดีฟอลต์เป็นว่าง ซึ่งเป็นคำตอบ least-privilege ที่ถูกต้องสำหรับแอปที่ไม่เรียก GCP API</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/iam/outputs.tf<em>19 บรรทัด</em></div>
+        <div class="f-desc"><p>อีเมลของ SA ทั้งสองตัว, member string และบรรทัด <code>ksa_annotation</code> ที่พร้อมวางลง overlay</p></div>
+      </div>
+
+      <div class="group">modules/network/ — VPC และทางออกเน็ต</div>
+      <div class="file">
+        <div class="f-name">modules/network/main.tf<em>164 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>VPC แบบ custom-mode (auto-mode จะสร้าง subnet ในทุก region ทั้งปัจจุบันและอนาคตเงียบ ๆ), หนึ่ง subnet พร้อม secondary range สำหรับ Pod และ Service, Cloud Router + NAT ให้ออกเน็ตได้ทางเดียว และ flow log ที่ sampling 50%</p>
+          <p>firewall 3 กฎ และไม่มี explicit deny เพราะ GCP ปฏิเสธ ingress ทั้งหมดโดยปริยายอยู่แล้ว สิ่งที่ตั้งใจไม่ใส่: กฎเปิดพอร์ต 22 ให้ทั้งโลก — การเข้า node ใช้ IAP TCP forwarding</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/network/variables.tf<em>46 บรรทัด</em></div>
+        <div class="f-desc"><p>การวางแผน IP ทั้งหมดอยู่ไฟล์เดียว ช่วง Pod เป็น <code>/17</code> เพราะ GKE จัดสรร <code>/24</code> ต่อ node นั่นรองรับ 128 node และเป็น decision เรื่องขนาดข้อเดียวที่แก้ไม่ได้โดยไม่สร้างคลัสเตอร์ใหม่</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">modules/network/outputs.tf<em>39 บรรทัด</em></div>
+        <div class="f-desc"><p>ชื่อต่าง ๆ ที่โมดูล GKE ต้องใช้ รวมถึง <code>node_tag</code> ซึ่ง node pool ต้องติด ไม่งั้นกฎ firewall ทั้งหมดจะไม่มีผล</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>258 บรรทัด</em></div>
+        <div class="f-desc"><p>แผนภาพ ASCII ของ flow Workload Identity, สามจุดที่พังเงียบ ๆ ได้, ลำดับ apply และ teardown สองขั้น พร้อม decision ทุกข้อและ trade-off ของมัน</p></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>Teardown มีสองขั้น และต้องเรียงลำดับ</b> <code>deletion_protection</code> อยู่ใน <em>state</em> ของ Terraform ไม่ใช่ในคำสั่งที่พิมพ์ ดังนั้น <code>terraform destroy</code> เฉย ๆ จะล้มเหลว ต้องรัน <code>terraform apply -var deletion_protection=false</code> ก่อน การมาค้นพบเรื่องนี้ตอนจะเก็บของ บนคลัสเตอร์ที่กินวันละ 8–13 ดอลลาร์ คือบ่ายที่ไม่สนุกอย่างแน่นอน</p>
+    </div>
+    <div class="note ok">
+      <p><b>ตรวจแล้ว</b> <code>fmt -check -recursive</code> สะอาด · <code>validate</code> ผ่าน · <code>0.0.0.0/0</code> ถูกปฏิเสธโดย variable validation · <strong>ไม่มี</strong> <code>google_service_account_key</code> ที่ไหนเลยในรีโป</p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ ARGOCD ═══════════════════════════════ -->
+  <section class="folder" id="argocd">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 5</span><span class="tag">GitOps delivery</span><span class="tag">5 ไฟล์</span></div>
+      <h2>argocd<span class="slash">/</span></h2>
+      <p class="f-why">
+        ครึ่ง CD — และเป็นเหตุผลที่ CI ไม่ถือ cluster credential เลย ArgoCD รันอยู่ใน
+        คลัสเตอร์และ <em>ดึง</em> จาก Git ถ้า CI runner ถูกยึด ผู้โจมตีจะได้ความสามารถ
+        ในการ commit ที่ review ได้และย้อนได้ ในขณะที่ pipeline แบบ push การถูกยึดแบบเดียวกัน
+        ให้ credential ที่ apply manifest อะไรก็ได้ลง production
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">apps/app-prod.yaml<em>82 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>ชี้ไปที่ <code>k8s/overlays/prod</code> พร้อม automated sync, prune, selfHeal และ retry/backoff</p>
+          <p>ในไฟล์นี้มีตัวแก้ที่ทำให้ HPA กับ ArgoCD อยู่ร่วมกันได้: <code>ignoreDifferences</code> บน <code>/spec/replicas</code> <strong>บวกกับ</strong> <code>RespectIgnoreDifferences=true</code> ตัวแรกอย่างเดียวไม่พอ — ถ้าไม่มี sync option ตัวหลัง ฟิลด์จะถูกซ่อนจากหน้า diff แต่ selfHeal ยัง revert อยู่ ดูเหมือนตั้งค่าแล้วแต่ไม่ทำงาน ซึ่งเป็นบั๊กประเภทที่แย่ที่สุด</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">apps/observability.yaml<em>270 บรรทัด</em></div>
+        <div class="f-desc"><p>5 Application เรียงด้วย sync-wave: kube-prometheus-stack (wave 0 เพราะมันเป็นเจ้าของ CRD), Loki กับ Tempo (wave 1), Alloy (wave 2 เพราะส่งข้อมูลไปทั้งสองตัว) และ Kustomization ของ dashboard/alert (wave 3) ใช้ multi-source: chart จาก upstream, values จากรีโปนี้ เวอร์ชัน chart pin ทั้งหมด</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">projects/app-project.yaml<em>69 บรรทัด</em></div>
+        <div class="f-desc"><p>จำกัดแคบ: source repo เดียว, namespace เดียว, อนุญาต namespaced kind 7 ชนิด และ cluster-scoped kind ชนิดเดียว (<code>Namespace</code>) manifest ที่พยายามใส่ <code>Secret</code> หรือ <code>ClusterRoleBinding</code> จะถูก ArgoCD ปฏิเสธ ไม่ใช่ apply ให้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">projects/<br>observability-project.yaml<em>45 บรรทัด</em></div>
+        <div class="f-desc"><p>project ที่สอง เพราะ Prometheus Operator จำเป็นต้องติดตั้ง CRD และ ClusterRole จริง ๆ ถ้ายัดรวมกับ project ของแอป จะเท่ากับให้สิทธิ์ pipeline ของแอปสร้าง <code>ClusterRoleBinding</code> ได้ — ซึ่งก็คือ cluster-admin ทางอ้อม</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>178 บรรทัด</em></div>
+        <div class="f-desc"><p>เส้นทางจาก commit ถึงการ deploy เป็นแผนภาพ, คำสั่ง bootstrap, เงื่อนไขของ private cluster และวิธีทดสอบ selfHeal โดยไม่ให้มันชนกับ HPA การ rollback คือ <code>git revert</code> — ไม่มีเครื่องมือแยกที่พฤติกรรมต่างจากเส้นทาง deploy</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════ OBSERVABILITY ═════════════════════════ -->
+  <section class="folder" id="obs">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 6</span><span class="tag">LGTM stack</span><span class="tag">10 ไฟล์</span></div>
+      <h2>observability<span class="slash">/</span></h2>
+      <p class="f-why">
+        datasource สามตัวที่ลิงก์หากันไม่ได้ ก็คือเครื่องมือสามชิ้น สิ่งที่ทำให้มันเป็นระบบเดียว
+        คือ key เดียวสำหรับ join — <code>trace_id</code> — ซึ่งมีอยู่ใน metrics เป็น exemplar,
+        ใน log เป็นฟิลด์ JSON และใน trace คือตัว trace เอง
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">kube-prometheus-stack<br>.values.yaml<em>340 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>Prometheus, Grafana และ Alertmanager — และ block ที่สำคัญที่สุดในโฟลเดอร์นี้คือ <code>grafana.datasources</code> ที่ต่อลิงก์ correlation ทั้งสี่ทาง: <code>exemplarTraceIdDestinations</code> (metric→trace), Loki <code>derivedFields</code> (log→trace), <code>tracesToLogsV2</code> (trace→log) และ <code>tracesToMetrics</code></p>
+          <p>ปิด exporter ของ control plane ไว้ เพราะ GKE ไม่เปิดให้เข้าถึง ถ้าเปิดไว้จะได้ target ที่ down ถาวร และ dashboard ที่มี panel พังเป็นที่รู้กันจะสอนให้คนเมินสีแดง</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">loki.values.yaml<em>148 บรรทัด</em></div>
+        <div class="f-desc"><p>โหมด SingleBinary ไม่ใช่ topology ดีฟอลต์ที่แยกเป็น 8 Deployment — อันนั้นถูกต้องเมื่อสเกลใหญ่ แต่เป็นภาระเปล่า ๆ สำหรับ log ของแอปเดียว <code>compactor.retention_enabled: true</code> จำเป็นเพื่อให้ retention ถูกบังคับจริง ถ้าไม่มี <code>retention_period</code> เป็นเพียงข้อเสนอแนะและดิสก์จะเต็ม</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">tempo.values.yaml<em>169 บรรทัด</em></div>
+        <div class="f-desc"><p>ใช้ <code>tempo-distributed</code> ไม่ใช่ single-binary ด้วยเหตุผลเฉพาะข้อเดียว: มีแต่ตัวนี้ที่รัน <strong>metrics-generator</strong> ซึ่งสร้าง service graph และ span metrics ที่ทำให้ service map ใน Grafana ทำงาน — และให้การวัด latency ชุดที่สองที่เป็นอิสระจาก histogram ของแอปเอง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">alloy.values.yaml<em>203 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>DaemonSet ที่เก็บข้อมูล ตั้งค่าด้วยภาษา River ใช้ Alloy ไม่ใช่ Promtail เพราะ Promtail เลิก support แล้วและจัดการได้แค่ log ตัวนี้จึงเป็น agent เดียวแทนที่จะเป็นสามตัว</p>
+          <p><code>trace_id</code> เก็บเป็น <strong>structured metadata ไม่ใช่ stream label</strong> เพราะมันไม่ซ้ำต่อ request ถ้าเลื่อนขึ้นเป็น label จะสร้าง Loki stream หนึ่งอันต่อหนึ่ง request และทำลาย index ส่วน <code>pod</code> ถูกกันออกด้วยเหตุผลเดียวกัน</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">alerts/app-alerts.yaml<em>205 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>11 กฎใน 4 กลุ่ม ทุกกฎมี <code>for:</code> และทุก annotation บอกว่าต้อง <em>ทำอะไร</em> — คำว่า "error rate สูง" ตอนตีสามไม่ช่วยให้ลงมือได้</p>
+          <p>ทุกกฎ RED กรอง <code>route!~"/healthz|/readyz"</code> เพราะ <code>/readyz</code> คืน 503 ทุกครั้งที่ปิดตัวแบบ graceful ซึ่งเป็นการทำงานตามที่ออกแบบ ถ้าไม่กรอง alert จะยิงทุกครั้งที่ deploy แล้วสอนให้ทุกคนเมินช่องทางนั้นไป</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">kustomization.yaml<em>62 บรรทัด</em></div>
+        <div class="f-desc"><p>แปลง dashboard JSON เป็น ConfigMap ที่ติด label ให้ sidecar ของ Grafana เก็บไป ตรงนี้ตั้ง <code>disableNameSuffixHash: true</code> ซึ่งตรงข้ามกับ ConfigMap ของแอป เพราะ sidecar เฝ้าดูจาก <em>label</em> ถ้ามี hash จะเหลือ dashboard ConfigMap กำพร้าเป็นแถว</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">dashboards/app-red.json<em>234 บรรทัด</em></div>
+        <div class="f-desc"><p>Rate, errors, duration — พร้อม <code>exemplar: true</code> บน query ของ latency ทำให้จุดข้าวหลามตัดบนกราฟลิงก์ตรงไปที่ trace ที่ทำให้เกิด spike รวมถึง panel ขอบเขต HPA และ CPU เทียบ request ซึ่งเป็นอัตราที่ autoscaler ใช้ตัดสินใจจริง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">dashboards/<br>cluster-health.json<em>238 บรรทัด</em></div>
+        <div class="f-desc"><p>สุขภาพ node และ capacity มองผ่านมุม <em>request</em> เทียบ allocatable ซึ่งเป็นสิ่งที่ scheduler ใช้คิด และเป็นคำอธิบายว่าทำไม pod ค้าง Pending ขณะที่ CPU ว่าง มี panel ของ PDB ด้วย เพราะ PDB ที่เป็นศูนย์ทำให้งาน maintenance พัง ไม่ใช่ตัวแอปพัง และความพังแบบนั้นมองไม่เห็นไปได้เป็นสัปดาห์</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">dashboards/<br>logs-traces.json<em>192 บรรทัด</em></div>
+        <div class="f-desc"><p>dashboard สำหรับ correlation: ปริมาณ log แยกตาม level, status จาก log ไว้เทียบกับ metrics, ตัวสำรวจ log ที่แต่ละแถวมีปุ่ม "View trace" และ panel สุขภาพของ pipeline เพื่อให้ collector ที่พังมองเห็นได้ ไม่ใช่เงียบหาย</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>225 บรรทัด</em></div>
+        <div class="f-desc"><p>แผนที่ ASCII ของลิงก์ correlation ทั้งสี่, ขั้นตอน "ลองเลย" สามขั้น และเหตุผลของทุกทางเลือก — รวมถึงความเชื่อมโยงเชิงสาเหตุระหว่าง zonal PVC ที่นี่กับ <code>min_nodes_per_zone = 1</code> ใน Terraform</p></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>รูปแบบการพังแบบเงียบที่ควรรู้</b> derived field ของ Grafana ดึง <code>trace_id</code> ด้วย regex ที่ match กับรูปแบบ log ของแอปเป๊ะ ๆ ถ้าเปลี่ยนรูปแบบ log correlation จะพัง <em>โดยไม่มี error</em> — มีแค่ปุ่ม "View trace" ที่หายไป นั่นคือเหตุผลที่ <code>trace_id</code> ถูกเขียนไว้ใน application contract ไม่ใช่ปล่อยให้เป็นรายละเอียดของ implementation</p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ WORKFLOWS ════════════════════════════ -->
+  <section class="folder" id="gha">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 7</span><span class="tag">CI ไม่ใช่ CD</span><span class="tag">2 ไฟล์</span></div>
+      <h2>.github/workflows<span class="slash">/</span></h2>
+      <p class="f-why">
+        คุณสมบัติที่สำคัญที่สุดของโฟลเดอร์นี้คือสิ่งที่มัน <em>ทำไม่ได้</em>
+        ไม่มี kubeconfig ไม่มี GCP credential ไม่มี <code>kubectl</code> ที่ไหนเลย
+        การเขียนออกไปข้างนอกอย่างเดียวที่มันทำ คือ Git commit ที่แก้ image tag หนึ่งบรรทัด
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">ci.yaml<em>353 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>4 job: <code>test</code> → <code>invariants</code> → <code>build</code> → <code>bump-manifest</code></p>
+          <p>ลำดับภายใน <code>build</code> สำคัญ: build image ลง tarball ในเครื่องก่อน <strong>สแกน</strong> แล้วจึง push การสแกนหลัง push เป็นละคร เพราะ image ที่มีช่องโหว่ถูกดึงไปใช้ได้แล้ว</p>
+          <p><code>bump-manifest</code> เขียน image ใหม่เป็น path ของ Artifact Registry ด้วย tag เดิม commit พร้อม <code>[skip ci]</code> แล้ว push ใช้ GitHub App token ไม่ใช่ <code>GITHUB_TOKEN</code> เพราะ push ของ token ตัวหลังไม่ trigger workflow และถูก branch protection บล็อก</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">terraform.yaml<em>161 บรรทัด</em></div>
+        <div class="f-desc">
+          <p><code>fmt</code>, <code>validate</code> และ <code>plan</code> บน PR โดย plan ถูกโพสต์เป็น comment ที่แทนที่ตัวเองแทนการต่อกันเป็นตั้ง ยืนยันตัวตนด้วย Workload Identity Federation — หลักการเดียวกับคลัสเตอร์ คือไม่มี JSON key ใน GitHub secret</p>
+          <p><strong>ไม่มีขั้น <code>apply</code> โดยเจตนา</strong> PR ถูกอนุมัติจากโค้ด ไม่ใช่จาก plan การ apply อัตโนมัติตอน merge หมายความว่าการเปลี่ยน node pool หรือการเปลี่ยนเลข subnet จะลง production เพราะมีคนชอบ diff</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>บั๊ก 3 ตัวของ check แบบ inline ที่เจอจากการรันจริง</b> grep ไปจับ comment ของตัวเอง (ไฟล์พวกนี้เขียนอธิบายกฎที่ตัวมันบังคับ) · check "ไม่มี kubectl" grep ที่ <code>.github/workflows/</code> จึงไปจับชื่อ step ของตัวเอง · และอีกสอง check anchor หลวมพอที่จะจับข้อความบรรยายแทนโค้ด ทั้งสามข้อคือเหตุผลที่ invariant ย้ายไปอยู่ใน <code>scripts/</code></p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ ANSIBLE ══════════════════════════════ -->
+  <section class="folder" id="ansible">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag task">Task 8</span><span class="tag">จัดการ VM</span><span class="tag">24 ไฟล์</span></div>
+      <h2>ansible<span class="slash">/</span></h2>
+      <p class="f-why">
+        เป็นอิสระจากทุกอย่างข้างบน ไม่ต้องมีคลัสเตอร์ 4 role แต่ละตัวมีโครงสร้างครบ
+        <code>tasks/ handlers/ defaults/ templates/ meta/</code>
+        เกณฑ์ตัดสินคือ idempotency: การรันครั้งที่สองต้องรายงาน <code>changed=0</code>
+        ซึ่งพลาดได้ง่าย และเป็นเหตุผลที่หลายทางเลือกข้างล่างดูจุกจิกเกินจำเป็น
+      </p>
+    </div>
+
+    <div class="files">
+      <div class="group">ระดับบนสุด</div>
+      <div class="file">
+        <div class="f-name">site.yml<em>69 บรรทัด</em></div>
+        <div class="f-desc"><p>เรียก 4 role ตามลำดับพึ่งพา <code>pre_tasks</code> มี assert ที่ล้มทันทีถ้าเป้าหมายไม่ใช่ตระกูล Debian และ <code>post_tasks</code> ยิง <code>uri</code> ไปที่พอร์ต NGINX และพอร์ต metrics จริง แล้ว assert ว่า HTML มี <code>inventory_hostname</code> อยู่ — พิสูจน์ว่าหน้าที่ template ไปถึง container จริง ไม่ใช่แค่มี <em>อะไรบางอย่าง</em> ตอบที่พอร์ต 8080</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">ansible.cfg<em>27 บรรทัด</em></div>
+        <div class="f-desc"><p>output เป็น YAML, เปิด <code>profile_tasks</code> ให้เห็นจำนวน change ท้ายการรัน, SSH pipelining และ ControlPersist ตั้งใจไม่ตั้ง <code>become_ask_pass</code> เพราะรหัสผ่านในไฟล์ config คือ credential ใน Git</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">group_vars/all.yml<em>44 บรรทัด</em></div>
+        <div class="f-desc"><p>ทุกเวอร์ชัน พอร์ต และ path ไม่มีอะไรที่เป็นเวอร์ชันฮาร์ดโค้ดใน task เพื่อให้การอัปเกรดเป็นการแก้บรรทัดเดียวในที่ที่ review ได้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">inventory/hosts.ini<em>24 บรรทัด</em></div>
+        <div class="f-desc"><p>มีแต่โฮสต์ ไม่มี credential มีกลุ่ม <code>[local_test]</code> คอมเมนต์ไว้ และคำสั่ง Multipass สำหรับสร้าง VM ทดสอบฟรี</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">requirements.yml<em>13 บรรทัด</em></div>
+        <div class="f-desc"><p><code>community.docker</code> และ <code>community.general</code> pin ทั้งคู่ เพราะการอัปเกรด collection เปลี่ยนพฤติกรรมของ module ได้ และ "เดือนที่แล้วมันใช้ได้" ไม่ใช่กลยุทธ์การ deploy</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>184 บรรทัด</em></div>
+        <div class="f-desc"><p>มีตารางกับดัก idempotency 6 ข้อพร้อมวิธีแก้ที่ใช้จริง — เป็นส่วนที่นำไปใช้ที่อื่นได้มากที่สุดในโฟลเดอร์นี้</p></div>
+      </div>
+
+      <div class="group">roles/common/ — พื้นฐาน OS · 4 ไฟล์</div>
+      <div class="file">
+        <div class="f-name">tasks/main.yml<em>61 บรรทัด</em></div>
+        <div class="f-desc"><p><code>apt upgrade: dist</code> พร้อม <code>cache_valid_time</code> ถ้าไม่มี การรีเฟรช metadata จะรายงาน <code>changed</code> ทุกครั้งและ <code>changed=0</code> จะเป็นไปไม่ได้ ตรวจว่ามี reboot ค้างแล้ว <em>รายงาน</em> ส่วนการ reboot จริงถูกกั้นด้วยตัวแปรที่ดีฟอลต์เป็น false</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">handlers/main.yml · defaults/main.yml<br>meta/main.yml<em>30 บรรทัด</em></div>
+        <div class="f-desc"><p>handler รีสตาร์ท <code>cron</code> หลังเปลี่ยน timezone เพราะ cron แคช timezone ไว้ตอนเริ่ม ถ้าไม่รีสตาร์ท งานที่ตั้งเวลาไว้จะยังรันตามชั่วโมงเดิม พลาดง่าย</p></div>
+      </div>
+
+      <div class="group">roles/docker/ — engine + log rotation · 5 ไฟล์</div>
+      <div class="file">
+        <div class="f-name">tasks/main.yml<em>85 บรรทัด</em></div>
+        <div class="f-desc"><p>ใช้ repo ทางการผ่านวิธี <strong>keyring</strong> ที่ <code>apt-key add</code> เลิกใช้แล้วมีเหตุผลที่สำคัญ: มันเชื่อ key นั้นสำหรับ <em>ทุก</em> repository ในเครื่อง ดังนั้น key ของ Docker ที่ถูกยึดจะเซ็นแพ็กเกจตัวแทนของอะไรก็ได้</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">templates/daemon.json.j2<em>15 บรรทัด</em></div>
+        <div class="f-desc"><p>หมุน log ที่ 10m × 3 driver <code>json-file</code> ดีฟอลต์ของ Docker <strong>ไม่จำกัดขนาด</strong> ดังนั้น container ที่ log เยอะตัวเดียวทำให้ดิสก์เต็มและโฮสต์ล่ม — เป็นเหตุขัดข้องที่เจอบ่อยจริง task นี้ validate JSON ก่อนเขียน ไม่งั้น <code>daemon.json</code> ที่ผิดจะถูกเขียน handler จะรีสตาร์ท dockerd แล้ว container ทุกตัวบนโฮสต์ก็ไปด้วย</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">handlers/main.yml · defaults/main.yml<br>meta/main.yml<em>44 บรรทัด</em></div>
+        <div class="f-desc"><p>handler รีสตาร์ท dockerd เฉพาะเมื่อมีการเปลี่ยนแปลง และ <code>live-restore</code> ทำให้ container รอดจากการรีสตาร์ทนั้น ส่วน <code>append: true</code> ใน task เพิ่มกลุ่ม — ถ้าเขียน <code>groups:</code> เปล่า ๆ มันจะ <em>แทนที่</em> supplementary group และถอด <code>sudo</code> ออกเงียบ ๆ</p></div>
+      </div>
+
+      <div class="group">roles/nginx_container/ — หน้าเว็บจาก template · 5 ไฟล์</div>
+      <div class="file">
+        <div class="f-name">tasks/main.yml<em>62 บรรทัด</em></div>
+        <div class="f-desc"><p>pin <code>nginx:1.27-alpine</code>, <code>restart_policy: always</code>, publish พอร์ต, bind-mount HTML แบบ <strong>read-only</strong> ตัวที่ละเอียดอ่อนคือ <code>comparisons: "*": strict</code> ถ้าไม่มี module จะเช็คแค่ว่ามี container ชื่อนี้อยู่ ดังนั้นการเปลี่ยนพอร์ตหรือ mount จะรายงาน <code>ok</code> โดยที่ไม่มีอะไรเปลี่ยนจริง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">templates/index.html.j2<em>51 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>render fact จริง — hostname, OS, kernel, IP — ให้หน้าเว็บพิสูจน์ว่าเป็น template ไม่ใช่ไฟล์ที่คัดลอกมา</p>
+          <p>ใช้ <code>ansible_date_time.date</code> ไม่ใช่ <code>.iso8601</code> เพราะความละเอียดระดับวินาทีจะต่างกันทุกครั้งที่รัน ทำให้ template ถูกเขียนใหม่ทุกครั้งและ <code>changed=0</code> เป็นไปไม่ได้ ความละเอียดระดับวันเก็บการพิสูจน์ไว้และตัดความแปรปรวนออก — เป็นกับดัก idempotency ที่ให้บทเรียนดีที่สุดในโฟลเดอร์นี้</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">handlers/main.yml · defaults/main.yml<br>meta/main.yml<em>34 บรรทัด</em></div>
+        <div class="f-desc"><p>handler ตัวนี้ซื่อสัตย์กับตัวเอง: NGINX เสิร์ฟไฟล์จาก bind mount ตรงจากดิสก์ ดังนั้นการรีสตาร์ทไม่จำเป็นจริง ๆ มันอยู่ที่นี่เพื่อแสดงกลไก handler ที่ทริกจากการเปลี่ยนแปลง และเพื่อให้ยังถูกต้องเมื่อ role นี้มี <code>nginx.conf</code> เพิ่มเข้ามาในอนาคต</p></div>
+      </div>
+
+      <div class="group">roles/node_exporter/ — service ที่ hardened · 5 ไฟล์</div>
+      <div class="file">
+        <div class="f-name">tasks/main.yml<em>81 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>สร้าง user แบบ <strong>system และ non-login</strong> เฉพาะ; ดาวน์โหลด binary พร้อม <strong>ตรวจ checksum</strong> — การ pin เวอร์ชันโดยไม่มี checksum ยังเท่ากับเชื่ออะไรก็ตามที่เซิร์ฟเวอร์ส่งมา</p>
+          <p>binary เป็นของ <code>root</code> ไม่ใช่ของ <code>node_exporter</code> เพราะ service account ต้องเขียนทับ binary ที่ตัวเองรันไม่ได้ ไม่งั้นการยึดโพรเซสจะกลายเป็นการฝังตัวถาวร</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">templates/<br>node_exporter.service.j2<em>63 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>ล้อมกรอบด้วย sandbox ไม่ใช่แค่ลดสิทธิ์: <code>ProtectSystem=strict</code>, <code>NoNewPrivileges</code>, <code>PrivateTmp</code>, <code>CapabilityBoundingSet</code> ว่างเปล่า, <code>SystemCallFilter=@system-service</code>, <code>MemoryDenyWriteExecute</code></p>
+          <p><code>MemoryMax=128M</code> และ <code>CPUQuota=20%</code> มีเหตุผลเฉพาะ: ระบบ monitoring ต้องไม่เป็นสาเหตุที่ทำให้โฮสต์หน่วยความจำหมด ถ้า exporter ทำตัวไม่ดี มันต้องตาย ไม่ใช่ workload ตาย</p>
+        </div>
+      </div>
+      <div class="file">
+        <div class="f-name">handlers/main.yml · defaults/main.yml<br>meta/main.yml<em>35 บรรทัด</em></div>
+        <div class="f-desc"><p>เวอร์ชันกับ checksum pin อยู่ข้างกันใน <code>defaults</code> ส่วน listen address เป็น <code>0.0.0.0</code> พร้อมหมายเหตุว่าโฮสต์จริงควรจำกัดพอร์ต 9100 ให้เฉพาะ subnet ของ monitoring ด้วย <code>ufw</code></p></div>
+      </div>
+    </div>
+
+    <div class="note ok">
+      <p><b>ตรวจแล้ว</b> <code>ansible-lint</code> รายงาน 0 failure 0 warning ผ่านโปรไฟล์ <strong>production</strong> ซึ่งเข้มที่สุด และ <code>--syntax-check</code> ผ่าน</p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════ SCRIPTS ══════════════════════════════ -->
+  <section class="folder" id="scripts">
+    <div class="f-head">
+      <div class="f-tags"><span class="tag">ครอบทุกส่วน</span><span class="tag">1 ไฟล์</span></div>
+      <h2>scripts<span class="slash">/</span></h2>
+      <p class="f-why">ไฟล์เดียว และมันเกิดขึ้นเพราะบั๊ก ไม่ใช่เพราะวางแผนไว้</p>
+    </div>
+
+    <div class="files">
+      <div class="file">
+        <div class="f-name">check-invariants.sh<em>139 บรรทัด</em></div>
+        <div class="f-desc">
+          <p>กฎ 7 ข้อที่ครอบทั้งรีโป: ไม่มี <code>:latest</code>, ไม่มี resource ที่เป็น service-account key, ไม่มี <code>kubectl</code> ใน CI, prod ไม่อ้าง <code>docker.io</code>, ไม่มี <code>spec.replicas</code> ฮาร์ดโค้ด, ไม่มี Action ที่ pin กับ ref ที่ขยับได้ และทุกโฟลเดอร์ระดับบนมี README</p>
+          <p>ตอนเขียนแบบ inline ใน workflow มันไปจับชื่อ step ของตัวเองและ grep pattern ของตัวเองแล้ว fail การย้ายออกจากโฟลเดอร์ที่มันสแกนช่วยตัดปัญหานั้น — และเหตุผลที่ดีกว่าคือ <strong>สคริปต์เดียวกันรันบนเครื่องได้</strong> ดังนั้นถ้ารันในเครื่องผ่าน CI ก็จะผ่าน กฎที่ตรวจสอบได้เฉพาะตอน push คือกฎที่คนจะเรียนรู้วิธีเลี่ยง</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note ok">
+      <p><b>สถานะปัจจุบัน</b> invariant ผ่าน 7/7 · <code>shellcheck</code> สะอาด</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ READING ORDER ══════════════════════════ -->
+  <section class="folder closing" id="order">
+    <h2>ลำดับที่ควรอ่าน</h2>
+    <p class="f-why">
+      ลำดับตามโครงสร้างไฟล์ข้างบนเหมาะกับการ <em>ค้นหา</em> แต่ถ้าจะ <em>เข้าใจ</em> รีโปนี้
+      ให้ไล่ตามสายพึ่งพาแทน — output ของแต่ละขั้นคือ input ของขั้นถัดไป
+    </p>
+
+    <div class="order">
+      <div class="step"><b>0</b><span><code>app/README.md</code> — ทำไมแอปที่ได้มา deploy ตามที่เป็นไม่ได้ ทุกอย่างที่ตามมาสมมติว่า endpoint พวกนี้มีอยู่</span></div>
+      <div class="step"><b>1</b><span><code>docker/README.md</code> — แอปนั้นกลายเป็น image 29 MB ที่ non-root และไม่มี shell ได้อย่างไร</span></div>
+      <div class="step"><b>2</b><span><code>k8s/README.md</code> — ตัว workload และสองครึ่งของ zero-downtime: <code>maxUnavailable: 0</code> อยู่ที่นี่ ส่วนลำดับ drain อยู่ที่ <code>app/</code></span></div>
+      <div class="step"><b>3</b><span><code>infra/terraform/README.md</code> — คลัสเตอร์ และ flow Workload Identity ที่ตอบเงื่อนไขสำคัญของโจทย์</span></div>
+      <div class="step"><b>4</b><span><code>argocd/README.md</code> — commit กลายเป็นการ deploy ได้อย่างไร และทำไม CI ไม่ถือ credential</span></div>
+      <div class="step"><b>5</b><span><code>.github/workflows/ci.yaml</code> — อีกฝั่งของเส้นแบ่งนั้น อ่านโดยมองหา <code>kubectl</code> จะไม่เจอ</span></div>
+      <div class="step"><b>6</b><span><code>observability/README.md</code> — ลิงก์ correlation ทั้งสี่ และฟิลด์เดียวที่ทุกอย่างขึ้นอยู่กับมัน</span></div>
+      <div class="step"><b>7</b><span><code>ansible/README.md</code> — เป็นอิสระจากทุกอย่างข้างบน ตารางกับดัก idempotency ในนั้นนำไปใช้ที่อื่นได้ดี</span></div>
+    </div>
+
+    <div class="note">
+      <p><b>ก่อนรันอะไร</b> มี placeholder 4 ตัวที่ตั้งใจไม่ commit: <code>PROJECT_ID</code>, <code>DOCKERHUB_USER</code>, <code>GH_OWNER/GH_REPO</code> และชื่อ bucket ของ tfstate README ของแต่ละโฟลเดอร์บอกว่าต้องแทนที่ตรงไหน และ <code>terraform output</code> สร้างสามตัวออกมาให้พร้อมคัดลอกวาง</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>96 ไฟล์</span>
+    <span>3 commit</span>
+    <span>Task 0–8 เสร็จครบ</span>
+    <span>ข้อมูล ณ 27 ส.ค. 2026</span>
+  </footer>
+
+  </main>
+</div>
+</div>
