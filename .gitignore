@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets and credentials — nothing here may ever reach Git.
+#
+# This is a backstop, not the control. The real controls are: Workload Identity
+# (so no GCP key exists to leak), CI secret stores, and a gitleaks scan before
+# submitting. A .gitignore only helps for files you remembered to name.
+# ─────────────────────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*-key.json
+*credentials*.json
+*service-account*.json
+.env
+.env.*
+!.env.example
+
+# kubeconfigs: a cluster admin credential in a file people copy around
+kubeconfig
+kubeconfig-*
+.kube/
+*.kubeconfig
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Terraform
+# ─────────────────────────────────────────────────────────────────────────────
+.terraform/
+.terraform.tfstate.lock.info
+
+# State is committed nowhere — it lives in the GCS backend. Ignored here so a
+# stray local run (e.g. -backend=false experiments) cannot commit one; state
+# holds the cluster CA and endpoint.
+*.tfstate
+*.tfstate.*
+
+# tfvars holds the project id and the operator's home IP. The .example is
+# committed; the real file is not.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Plan files are readable archives of the whole configuration and its values.
+*.tfplan
+crash.log
+crash.*.log
+
+# .terraform.lock.hcl IS committed on purpose (note the negation): it pins
+# provider versions and checksums, which is what makes builds reproducible.
+!.terraform.lock.hcl
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Go
+# ─────────────────────────────────────────────────────────────────────────────
+/app/app
+/app/hello-api
+*.exe
+*.test
+*.out
+coverage.*
+vendor/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ansible
+# ─────────────────────────────────────────────────────────────────────────────
+*.retry
+ansible/inventory/hosts.local.ini
+ansible/vault-password
+.vault_pass
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Editors / OS
+# ─────────────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Local scratch
+# ─────────────────────────────────────────────────────────────────────────────
+/tmp/
+/scratch/
+*.local.yaml
+*.local.yml

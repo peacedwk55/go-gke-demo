@@ -1,0 +1,62 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+# Turns the dashboard JSON files into ConfigMaps that Grafana's sidecar picks
+# up, and ships the PrometheusRule alongside them.
+#
+# Why the dashboards are ConfigMaps rather than Helm chart values: a dashboard
+# is a 200-line JSON document. Embedding it in a values file makes both
+# unreadable and unreviewable — a dashboard diff should look like a dashboard
+# diff. As a generated ConfigMap the JSON stays a real .json file that an editor
+# can validate and a reviewer can read.
+
+resources:
+  - alerts/app-alerts.yaml
+
+configMapGenerator:
+  - name: grafana-dashboard-app-red
+    files:
+      - app-red.json=dashboards/app-red.json
+    options:
+      # No hash suffix here.
+      #
+      # This is the opposite choice from the app's config ConfigMap, and for a
+      # concrete reason: the Grafana sidecar watches by LABEL, not by name, and
+      # reloads on content change without needing the name to move. A hash
+      # suffix would just leave a trail of orphaned dashboard ConfigMaps.
+      disableNameSuffixHash: true
+      labels:
+        # The label the sidecar selects on. Get it wrong and the dashboard is
+        # simply never loaded, with nothing logged to say so.
+        grafana_dashboard: "1"
+      annotations:
+        # Folder to file it under in the Grafana UI.
+        grafana_folder: Application
+
+  - name: grafana-dashboard-cluster-health
+    files:
+      - cluster-health.json=dashboards/cluster-health.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+      annotations:
+        grafana_folder: Infrastructure
+
+  - name: grafana-dashboard-logs-traces
+    files:
+      - logs-traces.json=dashboards/logs-traces.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+      annotations:
+        grafana_folder: Application
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: observability
+      app.kubernetes.io/managed-by: kustomize

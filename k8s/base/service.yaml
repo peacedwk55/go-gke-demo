@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-sample-app
+  labels:
+    app: go-sample-app
+spec:
+  # ClusterIP: the service is not internet-facing in this assignment. Exposure
+  # would be an Ingress or a Gateway API HTTPRoute in front of this Service --
+  # out of scope here, and deliberately not faked with a LoadBalancer, which
+  # would provision a billable external IP with no TLS and no WAF in front.
+  type: ClusterIP
+  selector:
+    app: go-sample-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

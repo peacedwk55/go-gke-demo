@@ -1,0 +1,48 @@
+# ServiceMonitor — tells Prometheus to scrape the app.
+#
+# This lives in the PROD OVERLAY, not in base/, on purpose. The
+# monitoring.coreos.com CRD only exists where the Prometheus Operator is
+# installed. Putting it in base/ would break `kustomize build k8s/overlays/dev`
+# against a plain kind cluster, and break `kubectl apply` with a confusing
+# "no matches for kind ServiceMonitor" rather than an obvious missing-dependency
+# error.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: go-sample-app
+  labels:
+    app: go-sample-app
+    # Matched by the Prometheus CR's serviceMonitorSelector. The values file
+    # also sets serviceMonitorSelectorNilUsesHelmValues: false so that
+    # ServiceMonitors outside the observability namespace are discovered at all —
+    # without that, this object is silently ignored.
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames: [prod]
+
+  selector:
+    matchLabels:
+      app: go-sample-app
+
+  endpoints:
+    - port: http
+      path: /metrics
+      # 30s: the HPA reacts on a 15s cycle against metrics-server, not against
+      # these, so a faster scrape buys resolution nobody reads and doubles the
+      # series volume.
+      interval: 30s
+      scrapeTimeout: 10s
+      scheme: http
+      # Required for exemplars to survive the scrape. Without it Prometheus
+      # discards the trace_id exemplars the app attaches to its latency
+      # histogram, and the metrics -> traces link in Grafana silently does
+      # nothing.
+      honorLabels: false
+      metricRelabelings:
+        # Drop the Go runtime's per-size-class allocation histograms. They are
+        # high-cardinality, nobody reads them, and they are a large share of the
+        # series this target produces.
+        - sourceLabels: [__name__]
+          regex: "go_gc_heap_allocs_by_size_bytes.*|go_gc_heap_frees_by_size_bytes.*"
+          action: drop

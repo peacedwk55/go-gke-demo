@@ -1,0 +1,59 @@
+# Everything the image does not need. Two reasons this matters beyond build speed:
+#   1. Smaller context = faster, more cache-friendly builds.
+#   2. Anything sent to the daemon can end up in an image layer by accident.
+#      Excluding credentials here is a second line of defence behind gitleaks.
+
+# ── VCS & CI ────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.github
+
+# ── Infrastructure: none of it is part of the application image ─────────────
+k8s/
+infra/
+argocd/
+observability/
+ansible/
+docker/
+
+# ── Docs ────────────────────────────────────────────────────────────────────
+*.md
+LICENSE
+docs/
+
+# ── Secrets & local state: must never reach the build context ──────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*-key.json
+*credentials*.json
+kubeconfig
+.kube/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.trivyignore
+
+# ── Go build artefacts & tests ─────────────────────────────────────────────
+# Test files are excluded deliberately: they are a CI gate (Task 7), not a
+# runtime artefact, and shipping them would only widen the image.
+**/*_test.go
+**/testdata/
+bin/
+dist/
+vendor/
+coverage.out
+*.test
+
+# ── Editors / OS ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+---
+common_reboot_if_required: false
+common_reboot_timeout: 600
+common_apt_cache_valid_time: 3600
+common_timezone: Asia/Bangkok
+common_base_packages:
+  - ca-certificates
+  - curl
+  - gnupg

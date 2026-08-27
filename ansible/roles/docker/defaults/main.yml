@@ -1,0 +1,25 @@
+---
+docker_apt_key_url: https://download.docker.com/linux/ubuntu/gpg
+docker_apt_keyring: /etc/apt/keyrings/docker.asc
+docker_apt_repo_arch: amd64
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Log rotation. Docker's default json-file driver has NO size cap, so one chatty
+# container fills the disk and takes the host down with it. 10m x 3 caps each
+# container at 30 MB.
+docker_log_driver: json-file
+docker_log_max_size: "10m"
+docker_log_max_file: "3"
+
+# live-restore keeps containers running across a dockerd restart, so applying a
+# daemon.json change does not bounce every workload on the host.
+docker_live_restore: true
+
+docker_users: []
+# Python SDK, required by community.docker modules.
+docker_sdk_package: python3-docker

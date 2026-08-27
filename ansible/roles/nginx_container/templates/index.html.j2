@@ -1,0 +1,51 @@
+<!doctype html>
+{#
+  Templating is the point of this file, so it uses real facts rather than static
+  text: inventory_hostname and ansible_date_time prove the page was rendered
+  per-host at run time, not copied.
+
+  NOTE: ansible_date_time changes on every run, which would make this template
+  report `changed` every time and break the changed=0 idempotency criterion. So
+  the timestamp is rendered from ansible_date_time.date (day granularity) rather
+  than .iso8601 (second granularity). Idempotency beats precision here -- and
+  this is exactly the trap that makes "second run reports changed=0" a
+  meaningful test rather than a formality.
+#}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ nginx_container_site_title }} — {{ inventory_hostname }}</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      max-width: 46rem; margin: 4rem auto; padding: 0 1.5rem; line-height: 1.6;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    p.sub { color: #6b7280; margin-top: 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 2rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb44; }
+    th { width: 14rem; font-weight: 600; }
+    code { font-family: ui-monospace, monospace; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>{{ nginx_container_site_title }}</h1>
+  <p class="sub">Served by <code>{{ nginx_container_image }}</code> in a Docker container.</p>
+
+  <table>
+    <tr><th>Host</th><td><code>{{ inventory_hostname }}</code></td></tr>
+    <tr><th>FQDN</th><td><code>{{ ansible_facts['fqdn'] | default('n/a') }}</code></td></tr>
+    <tr><th>OS</th><td>{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</td></tr>
+    <tr><th>Kernel</th><td><code>{{ ansible_facts['kernel'] }}</code></td></tr>
+    <tr><th>Architecture</th><td>{{ ansible_facts['architecture'] }}</td></tr>
+    <tr><th>CPUs</th><td>{{ ansible_facts['processor_vcpus'] | default('n/a') }}</td></tr>
+    <tr><th>Memory</th><td>{{ ansible_facts['memtotal_mb'] | default('n/a') }} MB</td></tr>
+    <tr><th>Primary IPv4</th><td><code>{{ ansible_facts['default_ipv4']['address'] | default('n/a') }}</code></td></tr>
+    <tr><th>Provisioned</th><td>{{ ansible_date_time.date }}</td></tr>
+    <tr><th>Published on</th><td><code>:{{ nginx_container_host_port }} → :{{ nginx_container_port }}</code></td></tr>
+    <tr><th>Metrics</th><td><code>:{{ node_exporter_port | default(9100) }}/metrics</code></td></tr>
+  </table>
+</body>
+</html>

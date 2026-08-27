@@ -1,0 +1,234 @@
+{
+  "title": "App — RED (Rate, Errors, Duration)",
+  "uid": "app-red",
+  "tags": ["go-sample-app", "red"],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "type": "constant",
+        "query": "prod",
+        "current": { "text": "prod", "value": "prod" },
+        "hide": 2
+      },
+      {
+        "name": "route",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(http_requests_total{namespace=\"$namespace\"}, route)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Golden signals — probe traffic excluded",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate — requests/sec by route",
+      "description": "/healthz and /readyz are excluded throughout this dashboard. At one readiness check every 5s and one liveness check every 10s per pod, probe traffic would dominate the rate and dilute the error ratio to meaninglessness.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10, "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{namespace=\"$namespace\", route=~\"$route\", route!~\"/healthz|/readyz\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Errors — 5xx ratio",
+      "description": "Alert threshold is 5% (AppHighErrorRate). The red band marks it, so the panel and the alert cannot drift apart silently.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{namespace=\"$namespace\", route!~\"/healthz|/readyz\", code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{namespace=\"$namespace\", route!~\"/healthz|/readyz\"}[5m])), 0.001)",
+          "legendFormat": "5xx ratio"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Duration — p50 / p95 / p99, with trace exemplars",
+      "description": "The diamonds are exemplars. Each carries a trace_id the app attached to the latency histogram; clicking one opens that exact request in Tempo. This is the metrics -> traces jump, and it is why the Prometheus datasource sets exemplarTraceIdDestinations and the app runs with exemplar-storage enabled.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "lineWidth": 2, "fillOpacity": 5 } }
+      },
+      "options": { "legend": { "displayMode": "table", "calcs": ["mean", "max"] } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!~\"/healthz|/readyz\"}[5m])))",
+          "legendFormat": "p50",
+          "exemplar": true
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!~\"/healthz|/readyz\"}[5m])))",
+          "legendFormat": "p95",
+          "exemplar": true
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", route!~\"/healthz|/readyz\"}[5m])))",
+          "legendFormat": "p99",
+          "exemplar": true
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Saturation & scaling",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Replicas — HPA current vs min/max",
+      "description": "The Deployment has no spec.replicas; the HPA owns it. If current sits on max, further load degrades latency instead of adding capacity (AppHPAAtMaxReplicas).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "lineWidth": 2 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=\"go-sample-app\"}",
+          "legendFormat": "current"
+        },
+        {
+          "refId": "B",
+          "expr": "kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"$namespace\", horizontalpodautoscaler=\"go-sample-app\"}",
+          "legendFormat": "min (HA baseline)"
+        },
+        {
+          "refId": "C",
+          "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=\"go-sample-app\"}",
+          "legendFormat": "max"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU — usage vs request (the HPA's denominator)",
+      "description": "The HPA targets 70% of the REQUEST, not of a limit — the container has no CPU limit on purpose, so a burst is never throttled by CFS quota. This panel shows the ratio the HPA actually acts on.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"go-sample-app-.*\", container=\"app\"}[5m])) / sum(kube_pod_container_resource_requests{namespace=\"$namespace\", pod=~\"go-sample-app-.*\", container=\"app\", resource=\"cpu\"})",
+          "legendFormat": "utilisation vs request"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory — working set vs limit (request == limit, Guaranteed QoS)",
+      "description": "Request and limit are equal at 256Mi, so this line approaching 1.0 means an imminent OOMKill rather than mere pressure. There is no burst headroom by design: memory is incompressible.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.8 },
+              { "color": "red", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"go-sample-app-.*\", container=\"app\"}) / sum(kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\"go-sample-app-.*\", container=\"app\", resource=\"memory\"})",
+          "legendFormat": "working set vs limit"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "In-flight requests & restarts",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(http_requests_in_flight{namespace=\"$namespace\"})",
+          "legendFormat": "in flight"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"go-sample-app-.*\"}[15m]))",
+          "legendFormat": "restarts (15m)"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Deployed build",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }
+    },
+    {
+      "type": "table",
+      "title": "Running versions",
+      "description": "app_build_info is emitted by the app with the version stamped in at build time via -ldflags. More than one row here means a rollout is in progress — or stuck.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 36 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "app_build_info",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

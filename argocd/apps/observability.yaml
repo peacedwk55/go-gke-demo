@@ -1,0 +1,270 @@
+# The LGTM stack, delivered by ArgoCD like everything else.
+#
+# Nothing in this cluster is hand-installed. `helm install` for the monitoring
+# stack is the usual exception people make, and it is the one that hurts: six
+# months later nobody knows which --set flags were passed, upgrades are manual,
+# and the stack that is supposed to tell you what changed is itself undocumented
+# drift.
+#
+# One Application per chart rather than an umbrella chart. Each can be synced,
+# rolled back and diffed independently, and a Loki upgrade cannot break
+# Prometheus. Sync waves order them, since Loki and Tempo datasources are
+# referenced by Grafana, which kube-prometheus-stack owns.
+#
+# Every chart version is pinned. `targetRevision` on a Helm source is the chart
+# version, and leaving it floating would mean ArgoCD silently upgrading the
+# monitoring stack whenever upstream publishes.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 0 — Prometheus Operator + Grafana + Alertmanager
+#
+# First because it installs the CRDs (ServiceMonitor, PrometheusRule) that the
+# app's ServiceMonitor and everything else depends on.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+
+  sources:
+    # Multi-source Application: the chart comes from upstream, the values file
+    # from our repo. This is what keeps values in Git and reviewable instead of
+    # smeared across --set flags.
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 65.5.0
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/observability/kube-prometheus-stack.values.yaml
+    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      # The Prometheus Operator CRDs exceed the 262144-byte annotation limit
+      # that client-side apply uses to store last-applied-configuration.
+      # Without server-side apply the sync fails outright.
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+
+  ignoreDifferences:
+    # The operator and the API server both mutate these after creation; without
+    # the exemptions the Application never reports Synced.
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /spec/conversion
+        - /status
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[]?.clientConfig.caBundle
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 1 — Loki (logs)
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: 6.21.0
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/observability/loki.values.yaml
+    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 1 — Tempo (traces)
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: tempo-distributed
+      targetRevision: 1.23.2
+      helm:
+        releaseName: tempo
+        valueFiles:
+          - $values/observability/tempo.values.yaml
+    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 2 — Grafana Alloy (collection)
+#
+# Last, because it ships logs to Loki and forwards OTLP to Tempo — both must
+# exist first or Alloy spends its first minutes in a crash/retry loop.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 0.10.1
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $values/observability/alloy.values.yaml
+    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 3 — dashboards and alert rules, as code.
+#
+# Kustomize, not Helm: these are our own manifests, not an upstream chart. Last
+# in the ordering because the PrometheusRule needs the CRD from wave 0 and the
+# dashboard ConfigMaps need Grafana's sidecar to be running to be picked up.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+  source:
+    repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    targetRevision: main
+    path: observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

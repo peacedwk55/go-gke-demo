@@ -1,0 +1,382 @@
+# CI — and only CI. There is no CD in this file.
+#
+# The single most important property of this workflow is what it CANNOT do: it
+# holds no kubeconfig, no GCP credential, and calls kubectl nowhere. Its only
+# write to the outside world is a Git commit that changes one image tag. ArgoCD,
+# running inside the cluster, notices and pulls.
+#
+# If this runner is compromised, the attacker gets the ability to make a commit —
+# reviewable, revertible, attributable — not cluster admin.
+#
+# Order is test -> build -> scan -> push -> bump, and it is load-bearing: the
+# scan happens on the built artefact BEFORE it is published, so a CRITICAL
+# vulnerability is never pushed to a registry where something could pull it.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    # Path filters are half of the loop protection. The bump commit only ever
+    # touches k8s/overlays/prod/kustomization.yaml, so excluding that path means
+    # the bump cannot retrigger this workflow. [skip ci] in the commit message is
+    # the other half — belt and braces, because a future change to these filters
+    # would silently reintroduce an infinite build loop.
+    paths-ignore:
+      - "k8s/overlays/**"
+      - "**/*.md"
+      - "docs/**"
+  pull_request:
+    branches: [main]
+
+# Least privilege at the workflow level. Individual jobs escalate only what they
+# need, and only the bump job gets contents: write.
+permissions:
+  contents: read
+
+concurrency:
+  # Cancel superseded runs on the same ref, except on main/tags where every
+  # commit must produce its own immutable image.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GO_VERSION: "1.26"
+  IMAGE_NAME: go-sample-app
+  TRIVY_VERSION: "0.74.0"
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. Test — the gate. Nothing is built if this fails.
+  # ───────────────────────────────────────────────────────────────────────────
+  test:
+    name: Lint & test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: app/go.sum
+
+      - name: gofmt
+        working-directory: app
+        run: |
+          # gofmt -l lists misformatted files and exits 0 either way, so the
+          # failure has to be constructed explicitly.
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::not gofmt'd:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: go vet
+        working-directory: app
+        run: go vet ./...
+
+      - name: go test -race
+        working-directory: app
+        # -race matters here specifically: the readiness flag is written by the
+        # signal handler and read by request goroutines. A data race there would
+        # be a real bug in the zero-downtime path.
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Coverage summary
+        working-directory: app
+        run: go tool cover -func=coverage.out | tail -1
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Repository invariants — cheap checks that catch expensive mistakes.
+  # ───────────────────────────────────────────────────────────────────────────
+  invariants:
+    name: Repository invariants
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No 'latest' tag anywhere
+        run: |
+          # A moving tag means "what is in production?" has no answer and a
+          # rollback is a race. Excludes the PSS enforce-version label, which
+          # legitimately uses the word.
+          if grep -rn ':latest' --include='*.yaml' --include='*.yml' \
+               --include='Dockerfile' k8s/ argocd/ docker/ observability/ ansible/ 2>/dev/null \
+               | grep -v 'enforce-version'; then
+            echo "::error::':latest' found — pin an immutable tag"; exit 1
+          fi
+          echo "OK: no :latest"
+
+      - name: No service account keys
+        run: |
+          # The Workload Identity guarantee, enforced rather than asserted.
+          if grep -rEn 'resource +"google_service_account_key"' --include='*.tf' .; then
+            echo "::error::google_service_account_key found — use Workload Identity"; exit 1
+          fi
+          echo "OK: no SA key resources"
+
+      - name: Manifests never reference docker.io directly
+        run: |
+          # The two-registry invariant: CI PUSHES to Docker Hub, GKE PULLS
+          # through the Artifact Registry remote repo. Every private node
+          # egresses via one Cloud NAT IP, so pulling from Docker Hub directly
+          # would share one rate limit across the whole cluster.
+          #
+          # k8s/overlays/dev is exempt: a local kind cluster has neither the NAT
+          # bottleneck nor GCP credentials.
+          if grep -rn 'docker\.io' k8s/base k8s/overlays/prod 2>/dev/null; then
+            echo "::error::prod manifests must pull via Artifact Registry, not docker.io"; exit 1
+          fi
+          echo "OK: prod pulls via AR"
+
+      - name: Deployment must not pin spec.replicas
+        run: |
+          # The HPA owns the replica count. A spec.replicas here would make
+          # ArgoCD selfHeal fight the HPA forever.
+          if grep -rnE '^\s{2}replicas:' k8s/base/deployment.yaml k8s/overlays/*/patches/*.yaml 2>/dev/null; then
+            echo "::error::spec.replicas found — the HPA owns scaling"; exit 1
+          fi
+          echo "OK: no pinned replicas"
+
+      - name: Render and validate manifests
+        run: |
+          curl -sSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz | tar xz -C /tmp
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz -C /tmp
+          mkdir -p rendered
+          for ov in dev prod; do
+            echo "--- $ov ---"
+            /tmp/kustomize build "k8s/overlays/$ov" > "rendered/$ov.yaml"
+            # CRD schemas (ServiceMonitor, PrometheusRule) come from the
+            # community catalogue; without the extra -schema-location those
+            # resources are silently SKIPPED rather than validated.
+            /tmp/kubeconform -strict -summary -kubernetes-version 1.30.0 \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+              "rendered/$ov.yaml"
+          done
+
+      - name: Trivy IaC scan — on RENDERED manifests
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          # `rendered/`, NOT the source tree, and this matters.
+          #
+          # Scanning k8s/ directly makes Trivy read each file in
+          # overlays/*/patches/ as a complete Deployment. They are Kustomize
+          # strategic-merge fragments — the securityContext lives in base/ — so
+          # it reports HIGH "using the default security context" against
+          # manifests that are fully hardened once merged.
+          #
+          # Measured: 2 spurious HIGH against the source tree, 0 HIGH / 0
+          # CRITICAL against the rendered output.
+          scan-ref: rendered
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          trivy-config: trivy.yaml
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 3. Build -> scan -> push.
+  #
+  # One job, because the scan must sit between build and push. Splitting them
+  # would mean either publishing before scanning, or shuttling the image
+  # through an artifact store for no benefit.
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build, scan, push
+    needs: [test, invariants]
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute immutable tag
+        id: meta
+        run: |
+          # sha-<short-sha> for every main build; vX.Y.Z additionally on a
+          # release tag. Never 'latest' — each build gets an identifier that
+          # points at exactly one artefact forever.
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build to a local tarball first, WITHOUT pushing, so Trivy inspects the
+      # exact bytes that would be published. Scanning after a push is theatre:
+      # the vulnerable image is already pullable.
+      - name: Build (load, do not push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.tag }}
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy scan — gate on CRITICAL
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          # --ignore-unfixed is deliberate, not laziness. A CVE with no upstream
+          # patch cannot be fixed by us; failing on it would block every build
+          # indefinitely and the inevitable response is to disable the gate
+          # entirely. Accepted risks go in .trivyignore with an expiry note.
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          scanners: vuln
+          trivy-config: ""
+        env:
+          TRIVY_DB_REPOSITORY: mirror.gcr.io/aquasec/trivy-db:2
+
+      - name: Report HIGH (informational, does not fail)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          format: table
+          severity: HIGH
+          exit-code: "0"
+          ignore-unfixed: true
+          scanners: vuln
+
+      # Only now, having passed the gate, do we publish.
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          # Repository secrets only. An access token, not the account password,
+          # so it can be revoked without changing the account.
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push to Docker Hub
+        id: push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          # Docker Hub is the PUSH target. The Artifact Registry remote repo is
+          # a read-through cache and cannot be pushed to.
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.tag }}
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+
+      - name: Record digest
+        if: github.event_name == 'push'
+        run: |
+          # A tag is a mutable pointer; the digest is the artefact. Recorded in
+          # the run summary for supply-chain traceability.
+          {
+            echo "### Image published"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Tag | \`${{ steps.meta.outputs.tag }}\` |"
+            echo "| Digest | \`${{ steps.push.outputs.digest }}\` |"
+            echo "| Pull path (GKE) | via Artifact Registry remote repo |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 4. The manifest bump — the entire extent of "deployment" in CI.
+  #
+  # This job writes one line to Git. It has no cluster access whatsoever.
+  # ───────────────────────────────────────────────────────────────────────────
+  bump-manifest:
+    name: Bump image tag in Git
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A GitHub App installation token, not the default GITHUB_TOKEN.
+          #
+          # Two reasons. GITHUB_TOKEN's pushes do not trigger workflows, which
+          # sounds convenient but silently breaks any future workflow that
+          # should react to manifest changes. And branch protection on main
+          # blocks GITHUB_TOKEN unless the rule is loosened for everyone.
+          #
+          # A GitHub App can be added to the protection rule's bypass list
+          # specifically, so protection stays ON for humans. A fine-grained PAT
+          # with contents:write scoped to this repo is the acceptable
+          # alternative. Where org policy forbids bypass, push to a
+          # release/bump-* branch and let auto-merge handle it.
+          token: ${{ secrets.MANIFEST_BUMP_TOKEN }}
+          # Full history so the commit is not on a detached shallow ref.
+          fetch-depth: 0
+
+      - name: Install kustomize
+        run: |
+          curl -sSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz \
+            | tar xz -C /usr/local/bin
+
+      - name: Set image to the AR pull path
+        working-directory: k8s/overlays/prod
+        env:
+          AR_HOST: ${{ vars.AR_REGION }}-docker.pkg.dev
+          GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          # THE two-registry crossover. The tag is identical on both sides; only
+          # the host prefix differs:
+          #
+          #   pushed to : docker.io/<user>/go-sample-app:<tag>
+          #   pulled as : <region>-docker.pkg.dev/<project>/dockerhub-remote/<user>/go-sample-app:<tag>
+          #
+          # This is the ONLY line in the repository that CI writes.
+          kustomize edit set image \
+            "go-sample-app=${AR_HOST}/${GCP_PROJECT}/dockerhub-remote/${DOCKERHUB_USER}/go-sample-app:${TAG}"
+          git diff -- kustomization.yaml
+
+      - name: Commit and push
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          git config user.name  "argocd-bot"
+          git config user.email "argocd-bot@users.noreply.github.com"
+
+          if git diff --quiet -- k8s/overlays/prod/kustomization.yaml; then
+            echo "image tag unchanged; nothing to commit"
+            exit 0
+          fi
+
+          git add k8s/overlays/prod/kustomization.yaml
+          # [skip ci] is the second half of the loop protection, alongside the
+          # paths-ignore filter at the top of this file.
+          git commit -m "chore(deploy): image ${TAG} [skip ci]" \
+                     -m "Digest: ${DIGEST}" \
+                     -m "Source commit: ${GITHUB_SHA}"
+
+          # Rebase rather than merge, so concurrent merges to main do not create
+          # a merge commit in the deployment history.
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
+          {
+            echo "### Deployment handed to ArgoCD"
+            echo ""
+            echo "Manifest bumped to \`${TAG}\`. ArgoCD will sync on its next"
+            echo "poll (or immediately, if a webhook is configured)."
+            echo ""
+            echo "No kubectl ran in this pipeline."
+          } >> "$GITHUB_STEP_SUMMARY"

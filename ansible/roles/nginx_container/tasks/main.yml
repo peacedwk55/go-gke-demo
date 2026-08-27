@@ -1,0 +1,62 @@
+---
+- name: Create the web content directory
+  ansible.builtin.file:
+    path: "{{ nginx_container_html_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Render index.html from the template
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_container_html_dir }}/index.html"
+    mode: "0644"
+    owner: root
+    group: root
+  register: nginx_container_html
+  notify: Restart nginx container
+
+- name: Run the NGINX container
+  community.docker.docker_container:
+    name: "{{ nginx_container_name }}"
+    # Pinned tag, never :latest -- the same rule as the application image. With
+    # :latest, "what is running?" has no answer and a rebuild silently changes
+    # the deployed version.
+    image: "{{ nginx_container_image }}"
+    state: started
+    # restart_policy: always -- survives both a container crash and a host
+    # reboot. Without it the container is gone after the first reboot and nobody
+    # notices until someone checks.
+    restart_policy: "{{ nginx_container_restart_policy }}"
+    published_ports:
+      - "{{ nginx_container_host_port }}:{{ nginx_container_port }}"
+    mounts:
+      - source: "{{ nginx_container_html_dir }}"
+        target: /usr/share/nginx/html
+        type: bind
+        # read_only: the container serves this content, it has no reason to be
+        # able to rewrite it. If NGINX is compromised, the attacker cannot
+        # persist a modified page on the host.
+        read_only: true
+    memory: "{{ nginx_container_memory }}"
+    # comparisons: strict makes the module reconcile the FULL desired state, not
+    # merely "a container with this name exists". Without it, changing a port or
+    # a mount is silently ignored on an already-running container -- the task
+    # reports ok and the change never happens.
+    comparisons:
+      "*": strict
+    # Pull only when the image is absent. With a pinned tag there is nothing new
+    # to fetch, and `pull: always` would report changed on every run, breaking
+    # idempotency.
+    pull: false
+  register: nginx_container_run
+
+- name: Ensure the image is present
+  community.docker.docker_image:
+    name: "{{ nginx_container_image }}"
+    source: pull
+    state: present
+    force_source: false
+  # Separate from the container task so the pull is explicit and idempotent.
+  # force_source: false is what keeps this from re-pulling every run.

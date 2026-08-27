@@ -1,0 +1,51 @@
+# Accepted Trivy findings.
+#
+# RULES for this file — enforced by review, because a scanner exception nobody
+# revisits is just a disabled scanner:
+#
+#   1. Every entry has an owner, a reason, and an EXPIRY date.
+#   2. An expired entry is a bug. Re-evaluate it; do not extend it by reflex.
+#   3. If the fix is "upgrade a dependency", do that instead of adding an entry.
+#   4. CVEs with no upstream fix do NOT belong here — the pipeline already runs
+#      with --ignore-unfixed, which handles them without an explicit exception.
+#      This file is for findings that ARE fixable, or that are false positives.
+#
+# Format: one ID per line, with a trailing comment.
+#   CVE-YYYY-NNNNN   # owner | reason | expires YYYY-MM-DD
+
+
+# ── Vulnerabilities ─────────────────────────────────────────────────────────
+#
+# None, and that is a measured result rather than an unfinished section:
+#
+#   trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed
+#     go-sample-app:v1.0.0
+#   -> debian: 0, gobinary: 0
+#
+# A distroless/static base contributes 5 OS packages in total, and the Go binary
+# is statically linked against current dependencies.
+
+
+# ── Misconfigurations (rendered Kubernetes manifests) ───────────────────────
+
+KSV-0125 # santiphap | false positive. "Image from an untrusted registry."
+         # Trivy's built-in allowlist does not include Artifact Registry, and
+         # there is no supported config-file key to extend it for this check (a
+         # misconfiguration.trusted-registries block is silently ignored —
+         # verified, not assumed). The image is pulled from
+         # asia-southeast1-docker.pkg.dev, a private AR remote repository owned
+         # by the same project as the cluster; that indirection exists
+         # specifically to AVOID pulling from Docker Hub across a shared Cloud
+         # NAT IP. Severity MEDIUM, below the HIGH/CRITICAL gate, so this
+         # suppression is for report cleanliness, not to pass a gate.
+         # Revisit if Trivy adds a configurable allowlist.
+         # expires 2027-02-28
+
+KSV-01010 # santiphap | false positive, dev overlay only. "ConfigMap stores
+         # sensitive contents in key MAX_NAME_LEN." A keyword heuristic firing
+         # on the substring in the key name. The value is the integer 128 — a
+         # maximum length for a query parameter, not a credential. Every value
+         # in overlays/*/config.env is non-secret by design: real secrets would
+         # come from External Secrets Operator, and nothing in this workload
+         # needs one because Workload Identity removes the usual credential.
+         # expires 2027-02-28

@@ -1,0 +1,11 @@
+# Scaling envelope for production.
+#
+# This is the file to edit to change capacity -- NOT spec.replicas on the
+# Deployment, which does not exist by design.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: go-sample-app
+spec:
+  minReplicas: 2
+  maxReplicas: 6

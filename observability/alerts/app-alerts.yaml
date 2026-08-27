@@ -1,0 +1,205 @@
+# PrometheusRule — alerts for the application and its scaling machinery.
+#
+# Every rule here follows two conventions:
+#
+#   `for:` is always set. An alert without it fires on a single scrape, which
+#   means transient blips page people and the alerts get muted. The duration is
+#   chosen per rule: long enough to exclude noise, short enough to matter.
+#
+#   Every annotation says what to DO, not just what happened. "High error rate"
+#   at 3am is not actionable; "5xx above 5% — check recent deploys and the RED
+#   dashboard" is.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: go-sample-app-alerts
+  namespace: observability
+  labels:
+    app: go-sample-app
+    # Matched by Prometheus's ruleSelector. Without the release label the rule
+    # is silently ignored — one of the more common "my alerts never fire"
+    # causes.
+    release: kube-prometheus-stack
+spec:
+  groups:
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: go-sample-app.availability
+      rules:
+        - alert: AppPodCrashLooping
+          # 3 restarts in 15 minutes. Not "restarts > 0": a single restart after
+          # a node eviction is normal and paging on it teaches people to ignore
+          # the alert.
+          expr: increase(kube_pod_container_status_restarts_total{namespace="prod", pod=~"go-sample-app-.*"}[15m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.pod }} is crash-looping"
+            description: >-
+              {{ $value | printf "%.0f" }} restarts in 15m. Check
+              `kubectl -n prod logs {{ $labels.pod }} --previous` first — the
+              previous container's logs are where the cause is. A recent image
+              bump in k8s/overlays/prod is the most likely trigger; rollback is
+              `git revert`.
+
+        - alert: AppNoReadyReplicas
+          expr: kube_deployment_status_replicas_ready{namespace="prod", deployment="go-sample-app"} == 0
+          # 2m, not longer: this is a full outage.
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "go-sample-app has zero ready replicas"
+            description: >-
+              Complete outage. Check readiness probe failures with
+              `kubectl -n prod describe pod -l app=go-sample-app`. Note that
+              /readyz returns 503 during a normal drain, so if a rollout is in
+              progress this may resolve on its own within a minute.
+
+        - alert: AppBelowHABaseline
+          # The HA pillar is "at least 2 replicas". One replica means the next
+          # disruption is an outage, so it is worth knowing before that happens.
+          expr: kube_deployment_status_replicas_ready{namespace="prod", deployment="go-sample-app"} < 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "go-sample-app below the 2-replica HA baseline"
+            description: >-
+              Only {{ $value }} ready replica(s). The HPA floor is 2, so this is
+              either a scheduling failure (check node capacity and the zonal
+              spread) or a pod stuck unready. A single replica means no
+              redundancy for the next node upgrade.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: go-sample-app.red
+      rules:
+        - alert: AppHighErrorRate
+          # Note the route filter. Probe traffic is excluded deliberately:
+          # /readyz returns 503 on every graceful shutdown, so including it
+          # would make this alert fire on every single rollout — the definition
+          # of an alert that gets ignored.
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="prod", route!~"/healthz|/readyz", code=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="prod", route!~"/healthz|/readyz"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "5xx rate above 5%"
+            description: >-
+              {{ $value | humanizePercentage }} of requests are failing. Open the
+              app RED dashboard, then use the exemplar diamonds on the latency
+              panel to jump straight to a failing trace in Tempo.
+
+        - alert: AppHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="prod", route!~"/healthz|/readyz"}[5m])) by (le, route)
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "p95 latency above 1s on {{ $labels.route }}"
+            description: >-
+              p95 is {{ $value | printf "%.2f" }}s. Check whether the HPA is at
+              its ceiling (AppHPAAtMaxReplicas) before assuming a code
+              regression — saturation and slowness look identical from here.
+
+        - alert: AppNoTraffic
+          # A service that suddenly receives nothing is usually a routing or
+          # DNS problem, and it is invisible to error-rate alerts because there
+          # are no errors — there are no requests.
+          expr: sum(rate(http_requests_total{namespace="prod", route!~"/healthz|/readyz"}[10m])) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "go-sample-app is receiving no application traffic"
+            description: >-
+              Probes are still hitting the pod (or this alert would not be
+              evaluating) but no real requests are arriving. Check the Service
+              endpoints and whatever routes traffic to it.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: go-sample-app.scaling
+      rules:
+        - alert: AppHPAAtMaxReplicas
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="prod", horizontalpodautoscaler="go-sample-app"}
+            >=
+            kube_horizontalpodautoscaler_spec_max_replicas{namespace="prod", horizontalpodautoscaler="go-sample-app"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HPA pinned at maxReplicas"
+            description: >-
+              The autoscaler has no headroom left, so further load degrades
+              latency instead of adding capacity. Raise maxReplicas in
+              k8s/overlays/prod/patches/hpa-scale.yaml, and check the node pool
+              has room for it (max_nodes_per_zone in Terraform).
+
+        - alert: AppHPAUnableToScale
+          # ScalingActive=False means the HPA cannot read metrics. It then holds
+          # at minReplicas and stops responding to load — silently, unless
+          # something like this says so.
+          expr: |
+            kube_horizontalpodautoscaler_status_condition{namespace="prod", horizontalpodautoscaler="go-sample-app", condition="ScalingActive", status="false"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HPA cannot compute a scaling decision"
+            description: >-
+              Usually metrics-server. The HPA still enforces minReplicas (2), so
+              this is not an outage, but the service will not scale under load.
+              Check `kubectl -n prod describe hpa go-sample-app`.
+
+        - alert: AppPDBBlockingDisruptions
+          # ALLOWED DISRUPTIONS = 0 means node drains hang. That does not break
+          # the application, it breaks maintenance — GKE node upgrades and
+          # autoscaler scale-downs stall, and the symptom appears weeks later as
+          # "upgrades never finish".
+          expr: kube_poddisruptionbudget_status_pod_disruptions_allowed{namespace="prod", poddisruptionbudget="go-sample-app"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PDB is allowing zero disruptions — node drains will hang"
+            description: >-
+              With minAvailable=1 this means only one replica is currently
+              healthy. Node upgrades and scale-downs are blocked until a second
+              replica becomes ready. Verify the PDB math still holds against the
+              HPA floor (see k8s/base/pdb.yaml).
+
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: observability.self
+      rules:
+        # The monitoring stack has to be monitored too, or its failure is
+        # indistinguishable from "everything is fine".
+        - alert: PrometheusTargetDown
+          expr: up{namespace=~"prod|observability"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Scrape target {{ $labels.job }} is down"
+            description: >-
+              Prometheus cannot reach {{ $labels.instance }}. Until it can, every
+              other alert scoped to that target is silently not evaluating.
+
+        - alert: LokiIngestionStalled
+          expr: sum(rate(loki_distributor_lines_received_total[10m])) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Loki is receiving no log lines"
+            description: >-
+              Alloy has probably stopped shipping. Logs are being lost right now
+              and the gap will be permanent. Check the Alloy DaemonSet.

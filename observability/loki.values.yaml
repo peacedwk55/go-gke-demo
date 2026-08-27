@@ -1,0 +1,148 @@
+# Loki — log aggregation.
+#
+# Chart version pinned in argocd/apps/observability.yaml (6.21.0).
+#
+# Deployed in SingleBinary mode. Loki's default is a microservices topology
+# (distributor, ingester, querier, query-frontend, compactor, index-gateway…),
+# which is the right answer at scale and pure overhead at this one: eight
+# Deployments to operate for a single application's logs. SingleBinary is one
+# pod with the same query API. The scale-out path is a values change, not a
+# rewrite — noted here so the choice reads as a decision rather than ignorance.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false # single tenant; multi-tenancy would need an auth proxy
+
+  commonConfig:
+    replication_factor: 1
+
+  # TSDB + the filesystem store. Object storage (GCS) is what production should
+  # use — it is cheaper, survives the pod, and decouples retention from disk
+  # size. Filesystem keeps this deployable without provisioning a bucket and an
+  # IAM binding, which is a fair trade for an assignment. The switch is
+  # `storage.type: gcs` plus a Workload Identity annotation on the SA.
+  storage:
+    type: filesystem
+
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+  limits_config:
+    retention_period: 168h # 7 days
+    # Logs arriving out of order are normal when a node's clock drifts or a
+    # collector retries; rejecting them loses exactly the logs from the
+    # misbehaving node you want to read.
+    reject_old_samples: false
+    ingestion_rate_mb: 10
+    ingestion_burst_size_mb: 20
+    max_query_series: 5000
+    max_cache_freshness_per_query: 10m
+    # Prevents the classic cardinality mistake of splitting a stream on a
+    # high-cardinality label such as pod name or, worse, trace id.
+    max_label_names_per_series: 15
+    allow_structured_metadata: true
+
+  compactor:
+    working_directory: /var/loki/compactor
+    # Retention is only actually enforced when the compactor is told to delete.
+    # Without this, retention_period is a suggestion and the disk fills.
+    retention_enabled: true
+    delete_request_store: filesystem
+
+  querier:
+    max_concurrent: 4
+
+  # Loki's own metrics, scraped by Prometheus. A log pipeline that cannot report
+  # its own ingestion rate and error count is a blind spot in the thing you use
+  # to remove blind spots.
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3100"
+
+singleBinary:
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard-rwo
+    size: 30Gi
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+
+  # Zonal PVC, same constraint as Prometheus: this pod is pinned to one zone for
+  # the life of the volume, which is why the node pool floor is 1 per zone.
+  topologySpreadConstraints: []
+
+# Not needed in SingleBinary mode. Left explicitly at zero rather than deleted,
+# so it is visible that they were considered rather than forgotten.
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Subcharts the umbrella chart enables by default and we do not want.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Caching layers: real wins at scale, two more StatefulSets to operate here.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+# The chart bundles a self-monitoring stack (its own Loki + Grafana Agent) which
+# would collide with the kube-prometheus-stack and Alloy deployed alongside it.
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+monitoring:
+  selfMonitoring:
+    enabled: false
+    grafanaAgent:
+      installOperator: false
+  lokiCanary:
+    enabled: false
+
+gateway:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 64Mi
+
+serviceMonitor:
+  enabled: true
+
+# Restricted Pod Security Standard compliance, matching the app.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]

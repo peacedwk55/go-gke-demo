@@ -1,0 +1,9 @@
+---
+nginx_container_image: "nginx:1.27-alpine"
+nginx_container_name: web
+nginx_container_host_port: 8080
+nginx_container_port: 80
+nginx_container_html_dir: /opt/nginx-web/html
+nginx_container_restart_policy: always
+nginx_container_memory: "128m"
+nginx_container_site_title: "Provisioned by Ansible"

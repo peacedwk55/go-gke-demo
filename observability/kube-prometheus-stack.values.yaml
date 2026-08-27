@@ -1,0 +1,340 @@
+# kube-prometheus-stack — metrics, dashboards, alerting.
+#
+# Chart version is pinned in argocd/apps/observability.yaml (65.5.0). Everything
+# configurable lives in this file rather than in `--set` flags, so the
+# monitoring stack is as reviewable and revertible as the application.
+#
+# The interesting part of this file is the Grafana `datasources` block: it is
+# where logs, traces and metrics are wired to each other. Three separate
+# datasources that cannot cross-link are three separate tools; the correlation
+# is what makes them one system.
+
+fullnameOverride: kube-prometheus-stack
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Prometheus
+# ─────────────────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: 40GiB
+
+    # Persistence, not the chart's default emptyDir. With emptyDir every pod
+    # restart — including a routine node upgrade — silently discards all
+    # history, which is discovered at the worst possible moment: while looking
+    # back at an incident that just happened.
+    #
+    # Note the volume is ZONAL. It pins this pod to one zone for the life of the
+    # claim, which is why the node pool keeps min_count = 1 per zone
+    # (infra/terraform/modules/gke). If the autoscaler could drain that zone to
+    # zero, Prometheus would go Pending and could not recover.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard-rwo
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+    # Discover ServiceMonitors and PrometheusRules in EVERY namespace, not just
+    # the release namespace. Without these the app's ServiceMonitor in `prod` is
+    # silently ignored — the single most common reason "my metrics do not appear".
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+
+    # Exemplars: the metrics -> traces link. The app attaches a trace_id
+    # exemplar to its latency histogram (see Metrics.observe in
+    # app/telemetry.go); this is what lets a spike on a latency panel be clicked
+    # straight through to the trace that caused it.
+    enableFeatures:
+      - exemplar-storage
+
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        # Memory limit == request for the same reason as the app: memory is
+        # incompressible. No CPU limit, so a scrape burst is not throttled.
+        memory: 2Gi
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+
+    # Spread the replica across zones if scaled up later.
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Grafana
+# ─────────────────────────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  # No public exposure. Reaching Grafana is `kubectl port-forward`; putting it
+  # on an Ingress needs SSO and TLS, which is a task of its own.
+  service:
+    type: ClusterIP
+
+  # The admin password comes from a pre-existing Secret, never from this file.
+  # Committing `adminPassword:` is how monitoring credentials end up in Git
+  # history forever. In production this Secret comes from External Secrets
+  # Operator backed by Secret Manager; for the demo, create it once by hand:
+  #
+  #   kubectl -n observability create secret generic grafana-admin \
+  #     --from-literal=admin-user=admin \
+  #     --from-literal=admin-password="$(openssl rand -base64 24)"
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  persistence:
+    enabled: true
+    storageClassName: standard-rwo
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Datasources — THIS is the correlation layer.
+  # ───────────────────────────────────────────────────────────────────────────
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # ── Metrics ────────────────────────────────────────────────────────
+        - name: Prometheus
+          type: prometheus
+          uid: prometheus
+          access: proxy
+          url: http://kube-prometheus-stack-prometheus.observability.svc:9090
+          isDefault: true
+          jsonData:
+            httpMethod: POST
+            # METRICS -> TRACES. When a series carries an exemplar with a
+            # trace_id label, Grafana renders it as a clickable diamond on the
+            # graph that opens the trace in Tempo.
+            exemplarTraceIdDestinations:
+              - name: trace_id
+                datasourceUid: tempo
+                urlDisplayLabel: View trace
+
+        # ── Logs ───────────────────────────────────────────────────────────
+        - name: Loki
+          type: loki
+          uid: loki
+          access: proxy
+          url: http://loki-gateway.observability.svc:80
+          jsonData:
+            # LOGS -> TRACES. The app logs one JSON line per request containing
+            # a trace_id field (see app/server.go). This regex lifts that value
+            # out of the log line and turns it into a "View trace" button.
+            #
+            # The regex must match the app's actual log format. It is written
+            # against `"trace_id":"<hex>"` as emitted by log/slog's JSON
+            # handler — change the log format and this breaks silently, which
+            # is why the field name is part of the §1.1 contract.
+            derivedFields:
+              - name: TraceID
+                matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+                datasourceUid: tempo
+                url: "$${__value.raw}"
+                urlDisplayLabel: View trace
+
+        # ── Traces ─────────────────────────────────────────────────────────
+        - name: Tempo
+          type: tempo
+          uid: tempo
+          access: proxy
+          url: http://tempo-query-frontend.observability.svc:3100
+          jsonData:
+            # TRACES -> LOGS. The reverse direction: from a span, find the log
+            # lines that belong to it. Grafana builds a Loki query from the
+            # span's service name and trace id.
+            tracesToLogsV2:
+              datasourceUid: loki
+              spanStartTimeShift: -5m
+              spanEndTimeShift: 5m
+              filterByTraceID: true
+              filterBySpanID: false
+              tags:
+                - key: service.name
+                  value: app
+              customQuery: true
+              query: '{namespace="prod"} |= "$${__span.traceId}"'
+
+            # TRACES -> METRICS. From a span, jump to the RED metrics for that
+            # route.
+            tracesToMetrics:
+              datasourceUid: prometheus
+              spanStartTimeShift: -5m
+              spanEndTimeShift: 5m
+              queries:
+                - name: Request rate
+                  query: 'sum(rate(http_requests_total{route=~".*"}[5m]))'
+                - name: p95 latency
+                  query: 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route))'
+
+            # The service graph and span metrics are generated by Tempo's
+            # metrics-generator, written back into Prometheus.
+            serviceMap:
+              datasourceUid: prometheus
+            nodeGraph:
+              enabled: true
+            search:
+              hide: false
+
+  # Dashboards as code. The sidecar watches for ConfigMaps labelled
+  # grafana_dashboard and loads them, so a dashboard is a file in Git rather
+  # than something someone drew in the UI and nobody can reproduce.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        # allowUiUpdates false: edits made in the UI are discarded on restart.
+        # Deliberately unfriendly — it forces dashboard changes through Git,
+        # which is the only way they survive and get reviewed.
+        allowUiUpdates: false
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      searchNamespace: ALL
+
+  grafana.ini:
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+    users:
+      # Nobody signs up to a monitoring system.
+      allow_sign_up: false
+    security:
+      cookie_secure: true
+      cookie_samesite: strict
+    # Required for the trace -> log correlation UI to appear.
+    feature_toggles:
+      enable: traceToMetrics traceToLogs
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Alertmanager
+# ─────────────────────────────────────────────────────────────────────────────
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard-rwo
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 128Mi
+
+  config:
+    route:
+      group_by: ["namespace", "alertname"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: "null"
+      routes:
+        # Watchdog fires constantly on purpose: it is the dead-man's switch that
+        # proves the alerting path itself is alive. It must be routed to
+        # /dev/null, not to humans.
+        - matchers: [alertname = "Watchdog"]
+          receiver: "null"
+        - matchers: [severity = "critical"]
+          receiver: "critical"
+          continue: false
+    receivers:
+      - name: "null"
+      - name: "critical"
+        # No webhook URL committed. A real deployment injects a Slack or
+        # PagerDuty URL from a Secret — a webhook URL is a credential.
+    inhibit_rules:
+      # A critical alert suppresses the warning for the same thing, so one
+      # problem does not page twice.
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity = "warning"]
+        equal: ["namespace", "alertname"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exporters
+# ─────────────────────────────────────────────────────────────────────────────
+nodeExporter:
+  enabled: true
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 64Mi
+
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 128Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+# GKE does not expose these control-plane components — the control plane is
+# managed and its metrics come from Cloud Monitoring instead. Left enabled they
+# produce permanently-down scrape targets, and a dashboard with known-broken
+# panels trains people to ignore red.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+defaultRules:
+  create: true
+  rules:
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    etcd: false
+    kubeProxy: false

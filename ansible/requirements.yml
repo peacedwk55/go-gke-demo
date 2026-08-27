@@ -1,0 +1,13 @@
+---
+# Galaxy collections used by these roles. Versions are pinned for the same
+# reason provider and chart versions are: a collection upgrade can change module
+# behaviour, and "it worked last month" is not a deployment strategy.
+#
+#   ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: community.docker
+    version: "3.13.1"
+    # docker_container / docker_image in the nginx_container role.
+  - name: community.general
+    version: "9.5.1"
+    # timezone module in the common role.

@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+# Dev pulls straight from Docker Hub. The Artifact Registry remote repository
+# exists to protect the GKE node pool from Docker Hub rate limits behind a
+# single Cloud NAT IP -- a local kind cluster has neither problem, and pointing
+# dev at AR would force every developer to hold GCP credentials.
+images:
+  - name: go-sample-app
+    newName: docker.io/DOCKERHUB_USER/go-sample-app
+    newTag: v1.0.0
+
+configMapGenerator:
+  - name: go-sample-app-config
+    envs:
+      - config.env
+
+patches:
+  - path: patches/hpa-scale.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: go-sample-app
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/instance: go-sample-app-dev
+      environment: dev

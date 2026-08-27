@@ -1,0 +1,238 @@
+{
+  "title": "Cluster & node health",
+  "uid": "cluster-health",
+  "tags": ["infrastructure", "gke"],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Capacity — is there room to scale?",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Nodes ready",
+      "description": "The node pool floor is 3 (1 per zone x 3 zones) and the ceiling is 9. Dropping below 3 means a zone has no node, which strands the zonal PVCs of Prometheus, Loki and Tempo.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(kube_node_status_condition{condition=\"Ready\", status=\"true\"})" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Zones with nodes",
+      "description": "Must stay at 3. The topologySpreadConstraints on the app spread across zones; with fewer zones that spreading silently degrades to no spreading.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 2 },
+              { "color": "green", "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "count(count by (label_topology_kubernetes_io_zone) (kube_node_labels))" }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "CPU requested vs allocatable",
+      "description": "Requests, not usage. This is what the scheduler actually reasons about — above ~90% new pods go Pending regardless of how idle the CPUs are.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.75 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"})"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Memory requested vs allocatable",
+      "description": "The LGTM stack dominates this number, which is why the node pool uses e2-standard-4 rather than something smaller.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.75 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) / sum(kube_node_status_allocatable{resource=\"memory\"})"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Node utilisation",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usage by node",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory usage by node",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk usage by node",
+      "description": "Nodes have 50GB pd-balanced boot disks. The container image cache is the usual reason this climbs; kubelet garbage-collects at 85%.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - (node_filesystem_avail_bytes{mountpoint=\"/\", fstype!=\"tmpfs\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!=\"tmpfs\"})",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Pods per node",
+      "description": "GKE allocates a /24 of the Pod secondary range per node, capping it at 110 pods. Approaching that limit is an address-planning problem, not a capacity one, and it cannot be fixed without rebuilding the cluster.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count by (node) (kube_pod_info{node!=\"\"})",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Workload trouble",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pods not running, by phase",
+      "description": "Pending that does not clear is usually either insufficient requests headroom or a zonal PVC whose zone has no node.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (kube_pod_status_phase{phase!=\"Running\", phase!=\"Succeeded\"})",
+          "legendFormat": "{{phase}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Container restarts (15m) by namespace",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total[15m])) > 0",
+          "legendFormat": "{{namespace}}"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "PodDisruptionBudgets — zero allowed disruptions blocks node drains",
+      "description": "A PDB at zero does not break the application; it breaks maintenance. GKE node upgrades and autoscaler scale-downs stall silently, and the symptom surfaces weeks later as upgrades that never finish.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 31 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_poddisruptionbudget_status_pod_disruptions_allowed",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+[Unit]
+Description=Prometheus Node Exporter
+Documentation=https://github.com/prometheus/node_exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+# Runs as the dedicated non-login system user, never root. A metrics exporter
+# reads /proc and /sys, both world-readable -- it has no need for privilege.
+User={{ node_exporter_user }}
+Group={{ node_exporter_group }}
+ExecStart={{ node_exporter_bin_dir }}/node_exporter \
+  --web.listen-address={{ node_exporter_listen_address }}:{{ node_exporter_port }} \
+  --collector.disable-defaults \
+  --collector.cpu \
+  --collector.diskstats \
+  --collector.filesystem \
+  --collector.loadavg \
+  --collector.meminfo \
+  --collector.netdev \
+  --collector.stat \
+  --collector.time \
+  --collector.uname \
+  --collector.systemd
+
+Restart=on-failure
+RestartSec=5s
+
+# ── Hardening ───────────────────────────────────────────────────────────────
+# systemd sandboxing, so a compromise of the exporter is contained by the init
+# system rather than only by the unprivileged user.
+NoNewPrivileges=true
+# strict: the entire filesystem is read-only to this unit, /home and /root are
+# inaccessible. The exporter writes nothing, so nothing is lost.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+# Only IP sockets -- it serves HTTP and needs nothing else.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Resource ceilings: monitoring must never be the reason a host runs out of
+# memory. If the exporter misbehaves, it dies instead of the workload.
+MemoryMax=128M
+CPUQuota=20%
+
+[Install]
+WantedBy=multi-user.target

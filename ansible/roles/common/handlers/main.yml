@@ -1,0 +1,8 @@
+---
+- name: Restart cron
+  ansible.builtin.systemd:
+    name: cron
+    state: restarted
+  # cron caches the timezone at start, so a timezone change does not take effect
+  # for scheduled jobs until it restarts. Easy to miss, and it manifests as jobs
+  # running at the wrong hour.

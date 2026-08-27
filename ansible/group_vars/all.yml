@@ -1,0 +1,44 @@
+---
+# Variables shared by every host.
+#
+# Everything version-like lives here or in a role's defaults/ — nothing is
+# hardcoded in a task. Two reasons: an upgrade becomes a one-line change in a
+# reviewable place, and "which version is deployed?" has an answer that does not
+# require reading task files.
+
+# ── common ──────────────────────────────────────────────────────────────────
+# Reboots are gated behind a variable, defaulting to OFF. A playbook that can
+# reboot production because a kernel package was updated is a playbook nobody
+# runs during the day.
+common_reboot_if_required: false
+common_apt_cache_valid_time: 3600
+common_timezone: Asia/Bangkok
+common_base_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - python3-pip
+
+# ── docker ──────────────────────────────────────────────────────────────────
+# Log rotation is the point of templating daemon.json. Docker's default
+# json-file driver has NO size limit, so a chatty container fills the disk and
+# takes the node down. 10m x 3 caps each container at 30 MB.
+docker_log_max_size: "10m"
+docker_log_max_file: "3"
+docker_users:
+  - "{{ ansible_user }}"
+
+# ── nginx_container ─────────────────────────────────────────────────────────
+# Pinned tag, never :latest — the same rule as the application image.
+nginx_container_image: "nginx:1.27-alpine"
+nginx_container_name: web
+nginx_container_host_port: 8080
+nginx_container_port: 80
+
+# ── node_exporter ───────────────────────────────────────────────────────────
+# Version and checksum are pinned together. A pinned version without a checksum
+# still trusts whatever the download server returns.
+node_exporter_version: "1.8.2"
+node_exporter_checksum: "sha256:6809dd0b3ec45fd6e992c19071fab216c07deba9d2d8b5f78a3f4e34e9dc3a6e"
+node_exporter_port: 9100
+node_exporter_user: node_exporter

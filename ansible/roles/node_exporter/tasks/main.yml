@@ -1,0 +1,81 @@
+---
+- name: Create the node_exporter system group
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    system: true
+    state: present
+
+- name: Create the node_exporter system user
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    # system: true puts the uid below 1000, keeping it out of the human user
+    # range and out of login listings.
+    system: true
+    # shell + no home: this account exists to own a process, not to be logged
+    # into. If the exporter is ever compromised there is no shell to land in and
+    # no home directory to stage anything in.
+    shell: /usr/sbin/nologin
+    create_home: false
+    home: /nonexistent
+    state: present
+
+- name: Check the installed version
+  ansible.builtin.command: "{{ node_exporter_bin_dir }}/node_exporter --version"
+  register: node_exporter_installed
+  # A version query is a read, not a change. Without changed_when: false this
+  # would report changed on every run and changed=0 would be unreachable.
+  changed_when: false
+  failed_when: false
+
+- name: Download and unpack node_exporter
+  ansible.builtin.unarchive:
+    src: >-
+      {{ node_exporter_download_base }}/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz
+    dest: /tmp
+    remote_src: true
+    # THE supply-chain control. Without this, a compromised or MITM-ed download
+    # is installed and started as a system service with no indication anything
+    # is wrong. With it, a mismatch fails the play loudly.
+    checksum: "{{ node_exporter_checksum }}"
+    creates: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
+  when: node_exporter_version not in (node_exporter_installed.stdout | default(''))
+
+- name: Install the binary
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
+    dest: "{{ node_exporter_bin_dir }}/node_exporter"
+    remote_src: true
+    mode: "0755"
+    owner: root
+    group: root
+  # Owned by root, not by node_exporter. The service account must not be able to
+  # overwrite the binary it executes -- otherwise a compromise of the process
+  # becomes persistence.
+  when: node_exporter_version not in (node_exporter_installed.stdout | default(''))
+  notify: Restart node_exporter
+
+- name: Remove the unpacked archive directory
+  ansible.builtin.file:
+    path: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}"
+    state: absent
+  # Keeps /tmp clean, and means the `creates:` guard above re-triggers correctly
+  # rather than depending on tmp cleanup policy.
+
+- name: Template the systemd unit
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Reload systemd
+    - Restart node_exporter
+
+- name: Ensure node_exporter is enabled and running
+  ansible.builtin.systemd:
+    name: node_exporter
+    state: started
+    enabled: true
+    daemon_reload: true

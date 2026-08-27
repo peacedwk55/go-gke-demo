@@ -1,0 +1,69 @@
+# AppProject for the application itself.
+#
+# An AppProject is the tenancy boundary in ArgoCD. Without one, every Application
+# lands in the `default` project, which permits any repo, any namespace and any
+# cluster-scoped resource. That makes ArgoCD a cluster-admin-equivalent
+# credential that anyone able to merge a manifest can drive.
+#
+# This project is scoped as tightly as the workload allows, and deliberately
+# does NOT grant the ability to create cluster-scoped resources beyond
+# Namespace — the observability stack needs CRDs and RBAC, so it gets a separate
+# project rather than loosening this one. Least privilege means the blast radius
+# of the app pipeline stays the app.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: go-sample-app
+  namespace: argocd
+  finalizers:
+    # Blocks deletion of the project while Applications still reference it, so
+    # removing a project cannot orphan running workloads.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Go sample app delivered from Git via Kustomize overlays
+
+  # Only this repository. An Application in this project cannot be pointed at
+  # an attacker-controlled repo, even by someone with ArgoCD API access.
+  sourceRepos:
+    - https://github.com/GH_OWNER/GH_REPO.git
+
+  # Only the prod namespace, only the in-cluster API server.
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: prod
+
+  # Namespace only. Not "*".
+  #
+  # Namespace is needed because CreateNamespace=true is in the sync options and
+  # the overlay ships namespace.yaml (carrying the restricted Pod Security
+  # Standard labels). Everything else the app needs is namespace-scoped.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  # Explicit allow-list of the namespaced kinds this app may manage. A manifest
+  # introducing, say, a Secret or a ClusterRoleBinding is refused by ArgoCD
+  # rather than applied — this is the guard against a supply-chain-style change
+  # slipping in through a manifest edit.
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ServiceAccount
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Service
+    - group: apps
+      kind: Deployment
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+
+  # Nothing may be granted elevated cluster rights through this project.
+  roles:
+    - name: read-only
+      description: View sync status and manifests; cannot trigger a sync or change anything
+      policies:
+        - p, proj:go-sample-app:read-only, applications, get, go-sample-app/*, allow

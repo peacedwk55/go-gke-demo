@@ -1,0 +1,15 @@
+---
+node_exporter_version: "1.8.2"
+# Checksum of node_exporter-<version>.linux-amd64.tar.gz, from the release's
+# sha256sums.txt. A pinned version WITHOUT a checksum still trusts whatever the
+# download server returns, which is only half a supply-chain control.
+node_exporter_checksum: "sha256:6809dd0b3ec45fd6e992c19071fab216c07deba9d2d8b5f78a3f4e34e9dc3a6e"
+node_exporter_arch: amd64
+node_exporter_user: node_exporter
+node_exporter_group: node_exporter
+node_exporter_bin_dir: /usr/local/bin
+node_exporter_port: 9100
+# Bind to all interfaces so Prometheus can scrape; a real deployment would
+# restrict this to the monitoring subnet at the firewall.
+node_exporter_listen_address: "0.0.0.0"
+node_exporter_download_base: "https://github.com/prometheus/node_exporter/releases/download"

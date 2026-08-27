@@ -1,0 +1,41 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: go-sample-app
+  labels:
+    app: go-sample-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: go-sample-app
+  # minReplicas is where the HA baseline actually lives, since the Deployment
+  # intentionally omits spec.replicas.
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # Percentage of the *request* (100m), not of a limit -- which is one
+          # more reason the container carries no CPU limit. 70% leaves headroom
+          # for a scale-up to complete before saturation.
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      # React quickly to real load, but not to a single scrape spike.
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+    scaleDown:
+      # Scale down slowly. Removing a pod is disruptive, and the cost of one
+      # extra replica for five minutes is far lower than the cost of flapping.
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

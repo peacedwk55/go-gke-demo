@@ -1,0 +1,28 @@
+---
+# Relaxed on cosmetics, strict on things that change meaning.
+extends: relaxed
+
+rules:
+  line-length:
+    # Comments in these files carry the reasoning, and wrapping them at 80 makes
+    # them harder to read, not easier.
+    max: 200
+    level: warning
+  comments-indentation: disable
+  document-start: disable
+  truthy:
+    # Rejects yes/no/on/off, which YAML 1.1 treats as booleans and YAML 1.2 does
+    # not. In a Kubernetes manifest that ambiguity is a real bug.
+    allowed-values: ["true", "false"]
+    check-keys: false
+  braces:
+    max-spaces-inside: 1
+  brackets:
+    max-spaces-inside: 1
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+
+ignore: |
+  .terraform/
+  observability/dashboards/

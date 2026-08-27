@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: santiphap
+  role_name: node_exporter
+  description: Prometheus Node Exporter as a hardened systemd service under a dedicated system user
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

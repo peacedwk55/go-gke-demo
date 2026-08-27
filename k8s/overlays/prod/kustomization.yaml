@@ -1,0 +1,70 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: prod
+
+resources:
+- ../../base
+- namespace.yaml
+# ServiceMonitor is overlay-only: the monitoring.coreos.com CRD exists only
+# where the Prometheus Operator is installed, so putting it in base/ would break
+# `kustomize build overlays/dev` against a plain kind cluster.
+- servicemonitor.yaml
+
+# ── Image ────────────────────────────────────────────────────────────────────
+# The ONLY place the image tag is written. CI rewrites exactly this block with:
+#
+#   kustomize edit set image go-sample-app=<AR-path>/go-sample-app:sha-<sha>
+#
+# Note the host: manifests always pull through the Artifact Registry remote
+# repository, never docker.io directly -- every private node egresses via one
+# Cloud NAT IP and would collectively trip Docker Hub's per-IP pull limit.
+# CI still *pushes* to Docker Hub; only the pull path differs. A remote repo is
+# a read-through cache and cannot be pushed to.
+images:
+- name: go-sample-app
+  newName: asia-southeast1-docker.pkg.dev/PROJECT_ID/dockerhub-remote/DOCKERHUB_USER/go-sample-app
+  newTag: v1.0.0
+
+# ── Config ───────────────────────────────────────────────────────────────────
+# Hash suffix left ON (the default). The generated name changes whenever
+# config.env changes, which rewrites the Deployment reference and rolls the
+# pods automatically. Without it, a ConfigMap edit would update in place and
+# leave the running pods on stale values until something happened to restart
+# them -- the classic silent-config-drift bug.
+#
+# The cost is orphaned ConfigMaps over time; ArgoCD prunes them, since the old
+# hashed name disappears from the desired state.
+configMapGenerator:
+- envs:
+  - config.env
+  name: go-sample-app-config
+
+patches:
+- path: patches/resources.yaml
+  target:
+    kind: Deployment
+    name: go-sample-app
+- path: patches/hpa-scale.yaml
+  target:
+    kind: HorizontalPodAutoscaler
+    name: go-sample-app
+- path: patches/serviceaccount-wi.yaml
+  target:
+    kind: ServiceAccount
+    name: go-sample-app
+
+# `labels:` (not the deprecated `commonLabels:`) because it defaults to
+# includeSelectors: false. Deployment and Service selectors are immutable after
+# creation, so a transformer that writes into them turns any future label change
+# into a delete-and-recreate. Stating `includeSelectors: false` explicitly is
+# redundant -- `kustomize edit` normalises the default away on the next CI bump
+# anyway, which is why the intent is recorded here instead.
+#
+# This file is kept in `kustomize edit` output format on purpose: CI runs
+# `kustomize edit set image` on every build, so pre-normalising means the bump
+# commit is a genuine one-line diff rather than a whole-file reindent.
+labels:
+- pairs:
+    app.kubernetes.io/instance: go-sample-app-prod
+    environment: prod

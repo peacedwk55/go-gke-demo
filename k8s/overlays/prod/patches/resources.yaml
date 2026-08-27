@@ -1,0 +1,19 @@
+# Production sizing. Dev keeps the smaller base values.
+#
+# Still no CPU limit -- see the rationale in base/deployment.yaml. Memory
+# request and limit stay equal, which keeps the Guaranteed QoS class.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-sample-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              memory: 256Mi

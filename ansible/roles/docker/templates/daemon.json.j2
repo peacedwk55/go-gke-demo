@@ -1,0 +1,15 @@
+{# Templated rather than copied so log limits are variables, tunable per host
+   group without editing a task. #}
+{
+  "log-driver": "{{ docker_log_driver }}",
+  "log-opts": {
+    "max-size": "{{ docker_log_max_size }}",
+    "max-file": "{{ docker_log_max_file }}"
+  },
+  "live-restore": {{ docker_live_restore | lower }},
+  "default-ulimits": {
+    "nofile": { "Name": "nofile", "Hard": 65536, "Soft": 65536 }
+  },
+  "no-new-privileges": true,
+  "userland-proxy": false
+}

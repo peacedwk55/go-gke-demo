@@ -1,0 +1,61 @@
+---
+# OS baseline: patched packages, correct timezone, no unnecessary reboots.
+
+- name: Update apt cache and upgrade all packages
+  ansible.builtin.apt:
+    update_cache: true
+    # cache_valid_time skips the metadata refresh if it happened recently. This
+    # is what keeps repeated runs fast AND idempotent-looking: without it the
+    # cache update reports changed on every single run and changed=0 is never
+    # achievable.
+    cache_valid_time: "{{ common_apt_cache_valid_time }}"
+    upgrade: dist
+  register: common_apt_upgrade
+  # The apt module, not `command: apt-get upgrade`. The module reports change
+  # accurately, is safe to re-run, and works under --check; a raw command is
+  # none of those.
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_base_packages }}"
+    state: present
+
+- name: Remove packages that are no longer required
+  ansible.builtin.apt:
+    autoremove: true
+    purge: true
+
+- name: Set the timezone
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+  notify: Restart cron
+
+- name: Check whether a reboot is pending
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: common_reboot_required
+  # A stat is a read. Marking it changed_when: false keeps it out of the change
+  # count, which matters because the idempotency criterion is changed=0.
+  changed_when: false
+
+- name: Report a pending reboot without acting on it
+  ansible.builtin.debug:
+    msg: >-
+      A reboot is required on {{ inventory_hostname }} (kernel or libc update).
+      Not rebooting: common_reboot_if_required is false. Schedule it, or re-run
+      with -e common_reboot_if_required=true.
+  when:
+    - common_reboot_required.stat.exists
+    - not common_reboot_if_required
+
+- name: Reboot, only when explicitly permitted
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ common_reboot_timeout }}"
+    msg: Rebooting after package updates (Ansible)
+  when:
+    - common_reboot_required.stat.exists
+    - common_reboot_if_required
+  # Gated behind a variable that defaults to false. An automation that can
+  # reboot production because a kernel package was updated is an automation
+  # nobody dares run during working hours -- so it stops being run at all, and
+  # the patching it was meant to deliver stops happening.

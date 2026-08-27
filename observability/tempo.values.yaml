@@ -1,0 +1,169 @@
+# Tempo — distributed tracing.
+#
+# Chart version pinned in argocd/apps/observability.yaml (tempo-distributed 1.23.2).
+#
+# The distributed chart is used rather than the single-binary one for a specific
+# reason: only tempo-distributed runs the metrics-generator, which derives the
+# service graph and span metrics that make the Grafana service map and the
+# trace -> metrics jump work. Those are a large part of what makes traces useful
+# rather than merely present.
+
+fullnameOverride: tempo
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingestion
+# ─────────────────────────────────────────────────────────────────────────────
+distributor:
+  replicas: 1
+
+  config:
+    log_received_spans:
+      enabled: false # one log line per span would swamp Loki
+
+  # OTLP only. Jaeger and Zipkin receivers are deliberately not enabled: the app
+  # speaks OTLP (see app/telemetry.go), and an open receiver nobody uses is
+  # attack surface plus a port to explain.
+  #
+  # The app's OTEL_EXPORTER_OTLP_ENDPOINT in k8s/overlays/prod/config.env points
+  # at :4318 (HTTP) on this service.
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+ingester:
+  replicas: 1
+
+  config:
+    replication_factor: 1
+    # How long a trace is held open before being flushed. Longer than the
+    # slowest expected request, or spans arriving late are written as a separate
+    # partial trace — which looks like a broken trace rather than a config
+    # problem.
+    trace_idle_period: 10s
+    max_block_duration: 5m
+
+  persistence:
+    enabled: true
+    storageClass: standard-rwo
+    size: 20Gi
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+
+querier:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+queryFrontend:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 128Mi
+
+compactor:
+  replicas: 1
+  config:
+    compaction:
+      block_retention: 168h # 7 days, matching Loki
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# metrics-generator — the reason for choosing the distributed chart.
+#
+# Derives RED metrics and a service graph FROM the traces and remote-writes them
+# into Prometheus. That is what populates Grafana's service map and the
+# trace -> metrics link, and it means span-derived latency exists even for
+# routes the application does not instrument by hand.
+# ─────────────────────────────────────────────────────────────────────────────
+metricsGenerator:
+  enabled: true
+  replicas: 1
+
+  config:
+    registry:
+      external_labels:
+        source: tempo
+    storage:
+      remote_write:
+        - url: http://kube-prometheus-stack-prometheus.observability.svc:9090/api/v1/write
+          send_exemplars: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Storage
+# ─────────────────────────────────────────────────────────────────────────────
+storage:
+  trace:
+    # Local filesystem backend. GCS is the production answer for the same
+    # reasons as Loki — cheaper, survives the pod, retention decoupled from
+    # disk. Kept local to avoid requiring a bucket and IAM binding for a demo.
+    backend: local
+    local:
+      path: /var/tempo/traces
+    wal:
+      path: /var/tempo/wal
+
+# Sampling is 100% at the SDK (ParentBased(AlwaysSample) in app/telemetry.go).
+# Correct at assignment volume; at real traffic this becomes a cost and cardinality
+# problem, and the answer is tail-based sampling in a collector — keep every
+# erroring and slow trace, sample the rest. Noted rather than implemented.
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
+    ingestion:
+      max_traces_per_user: 10000
+
+# Tempo's own metrics.
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
+
+# Bundled Grafana/Prometheus subcharts would collide with kube-prometheus-stack.
+prometheusRule:
+  enabled: false
+
+global:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault

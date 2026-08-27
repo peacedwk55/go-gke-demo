@@ -1,0 +1,192 @@
+{
+  "title": "Logs & traces — correlation",
+  "uid": "logs-traces",
+  "tags": ["go-sample-app", "loki", "tempo"],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "type": "constant",
+        "query": "prod",
+        "current": { "text": "prod", "value": "prod" },
+        "hide": 2
+      },
+      {
+        "name": "level",
+        "type": "custom",
+        "query": "ERROR,WARN,INFO,DEBUG",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "search",
+        "type": "textbox",
+        "label": "Free-text filter",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How the correlation works",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "Every request log line carries a `trace_id`, emitted by the app (`log/slog` JSON, one line per request).\n\n- **Log → trace**: expand any line in the Logs panel below and click **View trace**. The Loki datasource declares a derived field whose regex (`\"trace_id\":\"([a-f0-9]{32})\"`) lifts the id out of the line and links it into Tempo.\n- **Trace → log**: from a span in Tempo, **Logs for this span** runs `{namespace=\"prod\"} |= \"<traceID>\"` back against Loki.\n- **Metric → trace**: the exemplar diamonds on the *App — RED* dashboard's latency panel link to the exact request behind a spike.\n\nThe join key is one field, present in all three systems. That is the whole trick — and it is why `trace_id` is part of the application contract in CLAUDE.md §1.1 rather than an implementation detail."
+      }
+    },
+    {
+      "type": "row",
+      "title": "Log volume",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Log lines/sec by level",
+      "description": "A step change in ERROR volume is usually the fastest signal that a deploy went wrong — faster than the 5m error-rate alert window.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "cps", "custom": { "fillOpacity": 30, "stacking": { "mode": "normal" } } } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (level) (rate({namespace=\"$namespace\", app=\"go-sample-app\"}[$__auto]))",
+          "legendFormat": "{{level}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP status from logs, by route",
+      "description": "Derived from the app's structured logs rather than from metrics. Useful as a cross-check: if this and the RED dashboard disagree, one of the two pipelines is broken.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate({namespace=\"$namespace\", app=\"go-sample-app\"} | json | __error__=\"\" [$__auto]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Logs — expand a line and click 'View trace'",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
+    },
+    {
+      "type": "logs",
+      "title": "Application logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 14 },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{namespace=\"$namespace\", app=\"go-sample-app\", level=~\"$level\"} |= \"$search\"",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Errors only",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
+    },
+    {
+      "type": "logs",
+      "title": "Error log lines",
+      "description": "Note that a 503 from /readyz during a graceful drain is logged at INFO, not ERROR — it is the system working as designed. Logging it as an error would fill this panel on every rollout and train everyone to ignore it.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 29 },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{namespace=\"$namespace\", app=\"go-sample-app\", level=\"ERROR\"}",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Traces",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Span-derived latency (Tempo metrics-generator)",
+      "description": "Generated by Tempo FROM the traces and remote-written into Prometheus, independently of the app's own histogram. Two independent measurements of the same thing: if they disagree, that is itself the finding.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, span_name) (rate(traces_spanmetrics_latency_bucket{source=\"tempo\"}[5m])))",
+          "legendFormat": "p95 {{span_name}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Span rate by status",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status_code) (rate(traces_spanmetrics_calls_total{source=\"tempo\"}[5m]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Pipeline health — is the observability stack itself working?",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Loki ingestion & Tempo spans received",
+      "description": "Both dropping to zero means data is being lost right now, and the gap will be permanent. Alerted on as LokiIngestionStalled.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 49 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(loki_distributor_lines_received_total[5m]))",
+          "legendFormat": "Loki lines/sec"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(tempo_distributor_spans_received_total[5m]))",
+          "legendFormat": "Tempo spans/sec"
+        }
+      ]
+    }
+  ]
+}

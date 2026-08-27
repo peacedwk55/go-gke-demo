@@ -1,0 +1,203 @@
+# Grafana Alloy — the collection agent.
+#
+# Chart version pinned in argocd/apps/observability.yaml (0.10.1).
+#
+# Runs as a DaemonSet: log collection has to be node-local, because it reads
+# container stdout from the node's filesystem.
+#
+# Alloy rather than Promtail: Promtail is deprecated (end of support 2026) and
+# only handles logs. Alloy handles logs, metrics and OTLP traces in one agent,
+# which means one DaemonSet instead of three.
+#
+# The config below is Alloy's River syntax, not YAML — it is a string passed to
+# the chart.
+
+controller:
+  type: daemonset
+
+alloy:
+  # Needed to read container logs from the host and to discover pods.
+  clustering:
+    enabled: false
+
+  mounts:
+    varlog: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+    # Container logs on the node are owned by root. Reading them requires either
+    # root or a matching supplementary group; there is no way around this for a
+    # log collector, so it is called out rather than glossed over. The trade is
+    # contained by dropping every capability and a read-only root filesystem.
+    runAsUser: 0
+    runAsGroup: 0
+
+  configMap:
+    content: |-
+      // ═══════════════════════════════════════════════════════════════════════
+      // LOGS: node container logs -> Loki
+      // ═══════════════════════════════════════════════════════════════════════
+
+      discovery.kubernetes "pods" {
+        role = "pod"
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + coalesce(sys.env("HOSTNAME"), constants.hostname)
+        }
+      }
+
+      // Turn Kubernetes metadata into Loki stream labels.
+      //
+      // Only low-cardinality labels become stream labels. `pod` is deliberately
+      // NOT a label: with an HPA scaling and rolling updates replacing pods,
+      // every deploy would create a new set of streams. It stays available as
+      // structured metadata instead, which is queryable without multiplying
+      // streams.
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "__pod__"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"]
+          separator     = "/"
+          action        = "replace"
+          target_label  = "__path__"
+          replacement   = "/var/log/pods/*$1/*.log"
+        }
+      }
+
+      local.file_match "pod_logs" {
+        path_targets = discovery.relabel.pod_logs.output
+      }
+
+      loki.source.file "pod_logs" {
+        targets    = local.file_match.pod_logs.targets
+        forward_to = [loki.process.parse.receiver]
+      }
+
+      // Parse the application's JSON logs.
+      //
+      // trace_id is extracted and kept as STRUCTURED METADATA, not as a stream
+      // label. A trace id is unique per request: promoting it to a label would
+      // create one Loki stream per request and destroy the index. As structured
+      // metadata it is still filterable, and Grafana's derived field regex (see
+      // kube-prometheus-stack.values.yaml) reads it straight out of the line to
+      // build the "View trace" link.
+      loki.process "parse" {
+        forward_to = [loki.write.default.receiver]
+
+        stage.cri {}
+
+        stage.json {
+          expressions = {
+            level    = "level",
+            msg      = "msg",
+            trace_id = "trace_id",
+            route    = "route",
+            status   = "status",
+          }
+        }
+
+        stage.labels {
+          values = { level = "" }
+        }
+
+        stage.structured_metadata {
+          values = { trace_id = "", route = "", status = "" }
+        }
+
+        // Drop the empty trace_id on lines that are not request logs, so the
+        // derived-field link does not render a dead button.
+        stage.label_drop {
+          values = ["filename"]
+        }
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.observability.svc:80/loki/api/v1/push"
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // TRACES: OTLP in -> Tempo out
+      //
+      // Alloy sits between the app and Tempo so that batching, retries and any
+      // future sampling policy live in the agent rather than in every service.
+      // The app can also point straight at Tempo; this hop is the extension
+      // point.
+      // ═══════════════════════════════════════════════════════════════════════
+
+      otelcol.receiver.otlp "default" {
+        http { endpoint = "0.0.0.0:4318" }
+        grpc { endpoint = "0.0.0.0:4317" }
+
+        output {
+          traces = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      otelcol.processor.batch "default" {
+        timeout             = "5s"
+        send_batch_size     = 1024
+        send_batch_max_size = 2048
+
+        output {
+          traces = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo-distributor.observability.svc:4317"
+          tls { insecure = true }  // in-cluster traffic; mTLS would be a mesh concern
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // Alloy's own health
+      // ═══════════════════════════════════════════════════════════════════════
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+# Alloy's own metrics, so a broken collector is visible rather than silent.
+serviceMonitor:
+  enabled: true
+
+# The OTLP receiver ports must be reachable from application pods.
+service:
+  enabled: true
+  type: ClusterIP
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true

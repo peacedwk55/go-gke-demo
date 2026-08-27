@@ -1,0 +1,45 @@
+# AppProject for the LGTM stack.
+#
+# Separate from the app project on purpose. The observability stack legitimately
+# needs to install CRDs, ClusterRoles and other cluster-scoped objects — the
+# Prometheus Operator does not work otherwise. The application needs none of
+# that.
+#
+# Folding both into one project would mean granting the app pipeline the right to
+# create ClusterRoleBindings, which is effectively cluster-admin by another
+# route. Two projects keeps each blast radius matched to its actual need. This is
+# a deliberate deviation from the single-project layout sketched in CLAUDE.md §2.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: observability
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: LGTM stack (Loki, Grafana, Tempo, Prometheus) — GitOps-managed, never hand-installed
+
+  sourceRepos:
+    # Our repo, for the Helm values files.
+    - https://github.com/GH_OWNER/GH_REPO.git
+    # Upstream chart repositories. Enumerated explicitly rather than "*" so a
+    # chart cannot be pulled from an arbitrary registry.
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: observability
+
+  # The operator pattern requires cluster-scoped resources. "*" is used here
+  # with eyes open: pinning an exhaustive list of every CRD and ClusterRole a
+  # chart creates would break on the next chart upgrade, and the honest scope of
+  # "install the Prometheus Operator" is cluster-wide anyway. The containment is
+  # that only these three source repos can supply the manifests.
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

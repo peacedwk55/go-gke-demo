@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# The canonical, environment-agnostic definition of the workload. Nothing here
+# names an environment, a project, a registry or an image tag -- every one of
+# those is an overlay concern, which is what keeps base/ reusable and keeps
+# day-to-day changes confined to a small, reviewable diff.
+
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - pdb.yaml
+  - hpa.yaml
+
+labels:
+  # includeSelectors: false is deliberate. Deployment and Service selectors are
+  # immutable after creation; letting Kustomize inject labels into them means
+  # any future label change requires deleting and recreating the workload. The
+  # hand-written `app: go-sample-app` selector stays under our control instead.
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/name: go-sample-app
+      app.kubernetes.io/part-of: go-sample-app
+      app.kubernetes.io/managed-by: kustomize

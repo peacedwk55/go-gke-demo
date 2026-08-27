@@ -1,0 +1,8 @@
+---
+- name: Restart docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+    daemon_reload: true
+  # Fires only when daemon.json changed. With live_restore enabled, running
+  # containers survive this restart.

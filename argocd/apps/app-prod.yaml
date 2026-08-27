@@ -1,0 +1,82 @@
+# The Application that makes a Git commit become a deployment.
+#
+# This is the CD half of the pipeline, and the reason CI holds no cluster
+# credentials: ArgoCD runs inside the cluster and PULLS from Git. Nothing outside
+# the cluster ever needs kubectl access, so there is no long-lived kubeconfig or
+# GCP key to leak. Compromising the CI runner gets you a Git commit — reviewable,
+# revertible, auditable — not cluster admin.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: go-sample-app-prod
+  namespace: argocd
+  finalizers:
+    # Without this, deleting the Application leaves its resources running in the
+    # cluster as untracked orphans. With it, deletion cascades properly.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: go-sample-app
+
+  source:
+    repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    targetRevision: main
+    # A Kustomize overlay path in Git — not a local path, and not Helm. The
+    # overlay is the single source of truth for what runs in prod, and the image
+    # tag inside it is the one line CI rewrites.
+    path: k8s/overlays/prod
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+
+  syncPolicy:
+    automated:
+      # prune: remove resources deleted from Git. Without it Git is only ever
+      # additive and the cluster accumulates objects nobody remembers — most
+      # visibly the hash-suffixed ConfigMaps from configMapGenerator.
+      prune: true
+      # selfHeal: revert manual kubectl changes. This is what makes Git actually
+      # authoritative rather than merely aspirational.
+      selfHeal: true
+      # Do not delete everything if someone force-pushes an empty directory.
+      allowEmpty: false
+
+    syncOptions:
+      # The overlay ships namespace.yaml (with the restricted PSS labels), but
+      # server-side apply of namespaced resources fails if the namespace does
+      # not exist yet. This makes the first sync work.
+      - CreateNamespace=true
+      # Prune last, after everything else is healthy. Prevents a window where
+      # the old ConfigMap is gone but the new Deployment has not rolled out.
+      - PruneLast=true
+      # REQUIRED for ignoreDifferences below to have any effect on selfHeal.
+      # Without it, ignoreDifferences hides the field from the diff *view* but
+      # selfHeal still reverts it — the field appears ignored and is not.
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # THE HPA COMPATIBILITY FIX.
+  #
+  # The Deployment intentionally omits spec.replicas so the HPA owns the replica
+  # count (see k8s/base/deployment.yaml). Kubernetes still defaults the field to
+  # a concrete number in the live object, so ArgoCD would see live=4 against a
+  # manifest that does not specify it, call that drift, and — with selfHeal on —
+  # revert it. The HPA scales back up. Repeat forever.
+  #
+  # Belt and braces with the omitted field: either alone is sufficient, both
+  # together mean neither a future manifest edit nor an ArgoCD upgrade can
+  # reintroduce the fight.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+
+  revisionHistoryLimit: 10

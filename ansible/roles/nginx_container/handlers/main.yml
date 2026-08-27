@@ -1,0 +1,13 @@
+---
+- name: Restart nginx container
+  community.docker.docker_container:
+    name: "{{ nginx_container_name }}"
+    state: started
+    restart: true
+  # Only fires when index.html changed.
+  #
+  # Strictly speaking NGINX serves the bind-mounted file straight from disk, so a
+  # restart is not required for the new content to appear. It is here because the
+  # role must demonstrate change-triggered handlers, and because a restart is the
+  # honest way to guarantee the running container reflects the rendered
+  # configuration once this role grows an nginx.conf template.

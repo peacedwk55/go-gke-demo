@@ -1,0 +1,23 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: go-sample-app
+  labels:
+    app: go-sample-app
+spec:
+  # The arithmetic, spelled out because getting it wrong deadlocks node drains:
+  #
+  #   HPA minReplicas = 2, so the replica count is never below 2.
+  #   minAvailable: 1 therefore always permits exactly one voluntary eviction.
+  #
+  # `minAvailable: 2` is the trap: at the floor of 2 replicas it permits zero
+  # evictions, so `kubectl drain` -- and with it every GKE node upgrade and
+  # every autoscaler scale-down -- would hang forever.
+  #
+  # Stated as an absolute rather than a percentage: with `minAvailable: 50%`
+  # and 2 replicas Kubernetes rounds up to 2, silently reproducing that
+  # deadlock.
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: go-sample-app

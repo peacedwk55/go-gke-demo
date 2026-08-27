@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-sample-app
+  labels:
+    app: go-sample-app
+spec:
+  # NOTE: `replicas` is deliberately absent.
+  #
+  # The HPA owns the replica count (minReplicas: 2 is the HA baseline). If this
+  # field were set, ArgoCD selfHeal would revert every scale-up the HPA performs
+  # and the two controllers would fight indefinitely. The ArgoCD Application
+  # additionally declares ignoreDifferences on /spec/replicas as a second line
+  # of defence -- see argocd/apps/app-prod.yaml.
+  #
+  # Consequence to expect on a first apply: Kubernetes defaults the field to 1,
+  # and the HPA raises it to 2 on its next reconcile (~15-30s). It enforces
+  # minReplicas even while metrics still read <unknown>, so this self-corrects.
+  selector:
+    matchLabels:
+      app: go-sample-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxUnavailable: 0 -- never drop below the current replica count during a
+      # rollout. Combined with the drain sequence in the app (readiness fails,
+      # 5s pause, then shutdown) this is what makes the update genuinely
+      # zero-downtime rather than merely fast.
+      maxUnavailable: 0
+      maxSurge: 1
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        app: go-sample-app
+    spec:
+      serviceAccountName: go-sample-app
+      # Must exceed the drain budget of the app: 5s readiness propagation plus
+      # up to 20s in-flight drain plus the OTLP flush. See drain() in app/main.go.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          # "preferred", not "required": with 2 replicas on a 3-node pool this
+          # reliably spreads across nodes, but it must never block scheduling
+          # when the HPA scales past the node count or during a node drain.
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: go-sample-app
+      topologySpreadConstraints:
+        # Spread across the zones of the regional cluster so a single zone
+        # outage cannot take every replica. ScheduleAnyway for the same reason
+        # the anti-affinity is soft: availability beats perfect placement.
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: go-sample-app
+      containers:
+        - name: app
+          # Placeholder. The `images:` transformer in the overlay rewrites this
+          # to the Artifact Registry remote-repo path plus an immutable tag, and
+          # that single line is what CI edits. Never `latest`.
+          image: go-sample-app
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                # Hash-suffixed by configMapGenerator; Kustomize rewrites this
+                # reference, so a config change rolls the pods automatically.
+                name: go-sample-app-config
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              # Memory limit == request: memory is incompressible, so a limit
+              # above the request only buys the chance to be OOM-killed under
+              # node pressure after the scheduler has already over-committed.
+              # Equal values also give the pod the Guaranteed QoS class.
+              memory: 128Mi
+              # NO cpu limit -- deliberate.
+              #
+              # A CPU limit is enforced by CFS quota, which throttles the
+              # container even when the node has idle cores. For a latency-
+              # sensitive HTTP service that converts spare capacity into p99
+              # spikes for no benefit. The request already guarantees a share
+              # and is what drives both scheduling and the HPA target.
+          # Three probes, three distinct jobs:
+          #   startup   -- "has it finished booting?" Gates the other two, so a
+          #                slow start is never mistaken for a hang. 30 x 2s =
+          #                60s of grace, then liveness takes over.
+          #   liveness  -- "is the process wedged?" Checks only the process,
+          #                never a dependency: a liveness probe that follows a
+          #                downstream outage turns it into a restart storm.
+          #   readiness -- "should traffic come here?" This is the one that
+          #                delivers zero downtime: it returns 503 the instant
+          #                SIGTERM arrives, removing the pod from endpoints
+          #                before it stops serving.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            # One failure is enough to pull the pod out of rotation. Recovery
+            # requires two successes, so a flapping pod does not oscillate.
+            failureThreshold: 1
+            successThreshold: 2
+          volumeMounts:
+            # readOnlyRootFilesystem: true means the container cannot write
+            # anywhere by default. TLS, os.CreateTemp and pprof in Go all reach
+            # for /tmp, so it gets an explicit, size-capped volume.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

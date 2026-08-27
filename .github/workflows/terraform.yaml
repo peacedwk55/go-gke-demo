@@ -1,0 +1,161 @@
+# Terraform PR checks.
+#
+# fmt / validate / plan run automatically; APPLY DOES NOT. Infrastructure change
+# is gated on a human, because an automatic apply on merge means a bad plan
+# reaches production with no one having read it — and unlike a workload rollout,
+# there is no ArgoCD selfHeal to catch it and no zero-downtime path back.
+#
+# The plan output is posted as a PR comment so it is reviewed as part of the diff
+# rather than dug out of a logs pane.
+
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/terraform/**"
+
+permissions:
+  contents: read
+  # Only to write the plan comment.
+  pull-requests: write
+  # Workload Identity Federation exchanges this OIDC token for short-lived GCP
+  # credentials. Same principle as the cluster's Workload Identity: no JSON key
+  # exists to be stored in a GitHub secret.
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+  TF_IN_AUTOMATION: "true"
+  WORKDIR: infra/terraform/envs/prod
+
+jobs:
+  fmt-validate:
+    name: fmt & validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: terraform init (no backend)
+        # -backend=false so validate needs neither GCP credentials nor the state
+        # bucket. Structural and type errors are caught on every PR, including
+        # from forks.
+        working-directory: ${{ env.WORKDIR }}
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        working-directory: ${{ env.WORKDIR }}
+        run: terraform validate -no-color
+
+  plan:
+    name: plan
+    needs: fmt-validate
+    # Skipped for fork PRs: they cannot be trusted with cloud credentials, and
+    # a plan requires read access to the real project.
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          # No service account key. GitHub's OIDC token is exchanged for a
+          # short-lived GCP access token, with the WIF pool restricting which
+          # repository and which ref may make the exchange.
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        working-directory: ${{ env.WORKDIR }}
+        run: terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      - name: terraform plan
+        id: plan
+        working-directory: ${{ env.WORKDIR }}
+        # continue-on-error so a plan that exits non-zero (including a
+        # validation rejection like 0.0.0.0/0) still gets its output posted to
+        # the PR, then fails the job explicitly below.
+        continue-on-error: true
+        run: |
+          terraform plan -no-color -input=false -lock-timeout=5m \
+            -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -out=tfplan 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Post plan to the PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          WORKDIR: ${{ env.WORKDIR }}
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync(`${process.env.WORKDIR}/plan.txt`, 'utf8');
+            // GitHub comments cap at 65536 characters.
+            const LIMIT = 60000;
+            if (plan.length > LIMIT) {
+              plan = plan.slice(0, LIMIT) + '\n\n… truncated, see the full output in the job log.';
+            }
+            const body = [
+              '### Terraform plan',
+              '',
+              '<details><summary>Show plan</summary>',
+              '',
+              '```terraform',
+              plan,
+              '```',
+              '',
+              '</details>',
+              '',
+              '> Apply is **not** automated. Merge, then apply manually from a',
+              '> protected environment — see `infra/terraform/README.md`.',
+            ].join('\n');
+
+            // Replace our previous comment instead of stacking a new one on
+            // every push.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const mine = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('### Terraform plan'));
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: mine.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
+
+      - name: Fail if the plan failed
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
+
+      # Deliberately absent: any `terraform apply` step.
+      #
+      # Apply is run by a human from a protected GitHub Environment with required
+      # reviewers, or locally by an operator who has read the plan. Automating it
+      # on merge to main means a destructive plan — a node pool replacement, a
+      # subnet renumbering — lands in production because a PR was approved for
+      # its code, not for its plan.

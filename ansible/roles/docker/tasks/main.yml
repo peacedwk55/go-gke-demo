@@ -1,0 +1,85 @@
+---
+# Docker from the official repository, using the modern keyring method.
+
+- name: Ensure the apt keyring directory exists
+  ansible.builtin.file:
+    path: "{{ docker_apt_keyring | dirname }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Fetch the Docker apt signing key
+  ansible.builtin.get_url:
+    url: "{{ docker_apt_key_url }}"
+    dest: "{{ docker_apt_keyring }}"
+    mode: "0644"
+    owner: root
+    group: root
+  # get_url is idempotent: it will not re-download when the destination already
+  # matches. `apt-key add` is deprecated and, worse, trusts the key for EVERY
+  # repository on the system -- a compromised Docker key could then sign a
+  # replacement for any package. The signed-by keyring below scopes the trust to
+  # this one repository.
+
+- name: Add the Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ docker_apt_repo_arch }} signed-by={{ docker_apt_keyring }}]
+      https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}
+      {{ ansible_facts['distribution_release'] }} stable
+    filename: docker
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install the Docker Python SDK
+  ansible.builtin.apt:
+    name: "{{ docker_sdk_package }}"
+    state: present
+  # Required by community.docker.docker_container in the nginx_container role.
+  # Installed via apt rather than pip: on Ubuntu 24.04 pip refuses to touch the
+  # system Python (PEP 668) and the apt package is the supported path.
+
+- name: Template /etc/docker/daemon.json
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    owner: root
+    group: root
+    # Validate the JSON before it lands. A malformed daemon.json makes dockerd
+    # refuse to start, and the handler would then restart it into a dead state --
+    # taking every container on the host with it.
+    validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))"
+  notify: Restart docker
+  # notify, not a restart task. The restart happens only if the template
+  # actually changed, which is what keeps the second run at changed=0.
+
+- name: Ensure docker is enabled and running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Add users to the docker group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"
+  when: docker_users | length > 0
+  # append: true, not a bare groups assignment -- the latter REPLACES the user's
+  # supplementary groups and would silently strip sudo.
+  #
+  # Worth stating plainly: docker group membership is root-equivalent. Anyone in
+  # it can bind-mount / into a privileged container. It is granted here because
+  # the assignment implies interactive use; a hardened host would use rootless
+  # Docker or sudo-wrapped invocations instead.

@@ -1,0 +1,14 @@
+# Dev still runs 2 replicas, so that a rollout in dev exercises the same
+# PDB and anti-affinity behaviour as prod. maxReplicas is lowered because a
+# kind cluster or a shared dev node pool has no room for six.
+#
+# Dropping dev to minReplicas: 1 would be a false economy: it would make dev
+# the one environment where the PDB math and the zero-downtime rollout are
+# never actually tested.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: go-sample-app
+spec:
+  minReplicas: 2
+  maxReplicas: 3
