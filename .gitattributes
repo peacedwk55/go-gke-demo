@@ -1,0 +1,55 @@
+# Line endings are a correctness concern in this repository, not a style one.
+#
+# This machine has core.autocrlf=true set system-wide, which converts LF to CRLF
+# on checkout. Without the rules below, a clone on Windows produces a working
+# tree where:
+#
+#   * config.env values become "5s\r", so time.ParseDuration fails and the pod
+#     crash-loops at startup with a confusing error;
+#   * the templated systemd unit ships with CRLF and systemd refuses to load it;
+#   * the Alloy River config and the shell in Dockerfile RUN lines break in ways
+#     that are hard to attribute.
+#
+# The artefacts here are consumed on Linux — inside containers, on Ubuntu hosts,
+# in ubuntu-24.04 CI runners. `eol=lf` makes the checkout deterministic
+# regardless of the developer's platform or their global git config.
+
+# Default: let git detect text, and always check it out with LF.
+* text=auto eol=lf
+
+# ── Explicit, for the files where CRLF is actively harmful ──────────────────
+*.go        text eol=lf
+go.mod      text eol=lf
+go.sum      text eol=lf
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.tf        text eol=lf
+*.hcl       text eol=lf
+*.j2        text eol=lf
+*.env       text eol=lf
+*.ini       text eol=lf
+*.cfg       text eol=lf
+*.md        text eol=lf
+.dockerignore   text eol=lf
+.gitignore      text eol=lf
+.trivyignore    text eol=lf
+
+# ── Binary: never touched ───────────────────────────────────────────────────
+*.png binary
+*.jpg binary
+*.gz  binary
+*.tar binary
+*.zip binary
+
+# ── Diff hints ──────────────────────────────────────────────────────────────
+# Marks the Terraform lock file as generated, so it collapses in review rather
+# than burying the human-authored change beside it.
+.terraform.lock.hcl linguist-generated=true
+go.sum              linguist-generated=true
+
+# Dashboards are generated-ish: large machine-shaped JSON. Still reviewed, but
+# flagged so GitHub does not count them toward the language statistics.
+observability/dashboards/*.json linguist-generated=true
