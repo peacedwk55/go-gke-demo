@@ -95,48 +95,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: No 'latest' tag anywhere
-        run: |
-          # A moving tag means "what is in production?" has no answer and a
-          # rollback is a race. Excludes the PSS enforce-version label, which
-          # legitimately uses the word.
-          if grep -rn ':latest' --include='*.yaml' --include='*.yml' \
-               --include='Dockerfile' k8s/ argocd/ docker/ observability/ ansible/ 2>/dev/null \
-               | grep -v 'enforce-version'; then
-            echo "::error::':latest' found — pin an immutable tag"; exit 1
-          fi
-          echo "OK: no :latest"
-
-      - name: No service account keys
-        run: |
-          # The Workload Identity guarantee, enforced rather than asserted.
-          if grep -rEn 'resource +"google_service_account_key"' --include='*.tf' .; then
-            echo "::error::google_service_account_key found — use Workload Identity"; exit 1
-          fi
-          echo "OK: no SA key resources"
-
-      - name: Manifests never reference docker.io directly
-        run: |
-          # The two-registry invariant: CI PUSHES to Docker Hub, GKE PULLS
-          # through the Artifact Registry remote repo. Every private node
-          # egresses via one Cloud NAT IP, so pulling from Docker Hub directly
-          # would share one rate limit across the whole cluster.
-          #
-          # k8s/overlays/dev is exempt: a local kind cluster has neither the NAT
-          # bottleneck nor GCP credentials.
-          if grep -rn 'docker\.io' k8s/base k8s/overlays/prod 2>/dev/null; then
-            echo "::error::prod manifests must pull via Artifact Registry, not docker.io"; exit 1
-          fi
-          echo "OK: prod pulls via AR"
-
-      - name: Deployment must not pin spec.replicas
-        run: |
-          # The HPA owns the replica count. A spec.replicas here would make
-          # ArgoCD selfHeal fight the HPA forever.
-          if grep -rnE '^\s{2}replicas:' k8s/base/deployment.yaml k8s/overlays/*/patches/*.yaml 2>/dev/null; then
-            echo "::error::spec.replicas found — the HPA owns scaling"; exit 1
-          fi
-          echo "OK: no pinned replicas"
+      # All seven invariants live in scripts/check-invariants.sh rather than
+      # inline here, for two reasons.
+      #
+      # The "no kubectl in CI" check greps .github/workflows/. Written inline it
+      # matched its own step name and its own grep pattern, and failed on itself.
+      # Moving the checks out of the scanned directory removes the
+      # self-reference.
+      #
+      # The better reason: the same script runs on a laptop, so a green local run
+      # means a green CI check. An invariant that can only be evaluated by
+      # pushing is one people learn to work around.
+      - name: Repository invariants
+        run: ./scripts/check-invariants.sh
 
       - name: Render and validate manifests
         run: |

@@ -311,6 +311,34 @@ Everything below was executed, not asserted.
 | `0.0.0.0/0` in `master_authorized_networks` | rejected by variable validation |
 | `google_service_account_key` | zero occurrences |
 
+### Everything else
+
+| Check | Result |
+|---|---|
+| `hadolint` (Dockerfile) | 0 findings |
+| `ansible-lint` | 0 failures, 0 warnings — meets the **production** profile |
+| `ansible-playbook --syntax-check` | passes |
+| `yamllint` (47 files) | 0 findings |
+| `actionlint` (workflows) | 0 findings |
+| `shellcheck` (`scripts/`) | 0 findings |
+| `gitleaks` (working tree + history) | no leaks found |
+| `trivy config` on **rendered** manifests | 0 HIGH / 0 CRITICAL — 41 of 42 policies pass |
+| `./scripts/check-invariants.sh` | 7/7 hold |
+
+> `trivy config` must run on **rendered** output, not the source tree. Against `k8s/` directly it
+> reads `overlays/*/patches/*.yaml` as complete Deployments — they are strategic-merge fragments, so
+> it reports 2 spurious HIGH "default security context" findings for manifests that are fully
+> hardened once merged. CI renders first, for that reason.
+
+### Reproduce it all
+
+```bash
+./scripts/check-invariants.sh      # the 7 repository invariants, locally
+```
+
+Every tool above runs in a container, so none of it requires a local install beyond Docker — see
+each directory's README for the exact commands.
+
 ---
 
 ## Trade-offs, and what I would do next
