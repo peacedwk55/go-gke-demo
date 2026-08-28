@@ -1,4 +1,4 @@
-<title>96 ไฟล์</title>
+<title>97 ไฟล์</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -388,6 +388,155 @@ code {
 }
 .step span { color: var(--ink-soft); font-size: 15.5px; line-height: 1.75; }
 
+/* ── ไทม์ไลน์การสร้าง ──────────────────────────────────────────────────── */
+.phases { margin-top: 10px; display: grid; gap: 0; }
+.phase {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 0 18px;
+  padding-bottom: 26px;
+  position: relative;
+}
+.phase:last-child { padding-bottom: 0; }
+/* เส้นเชื่อมแนวตั้ง วาดจาก gutter ของแต่ละขั้น */
+.phase:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 30px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--rule);
+}
+.p-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--copper);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;
+}
+.p-body { display: grid; gap: 7px; padding-top: 2px; }
+.p-title {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0;
+}
+.p-body p { margin: 0; color: var(--ink-soft); font-size: 15.5px; line-height: 1.78; max-width: 68ch; }
+.found {
+  margin-top: 3px;
+  padding: 10px 15px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: 5px;
+  font-size: 14.5px;
+  line-height: 1.72;
+  color: var(--ink-soft);
+}
+.found b {
+  color: var(--copper);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* ── ตารางสถานะ ────────────────────────────────────────────────────────── */
+.status-wrap { overflow-x: auto; margin-top: 8px; }
+table.status {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14.5px;
+  overflow: hidden;
+}
+table.status th, table.status td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  line-height: 1.65;
+  vertical-align: top;
+}
+table.status thead th {
+  font-size: 11.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 500;
+  background: var(--surface-2);
+}
+table.status tbody tr:last-child td { border-bottom: 0; }
+table.status td:first-child {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 9px;
+  border-radius: 20px;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+.pill.run  { background: var(--verd-wash); color: var(--verdigris); border: 1px solid color-mix(in srgb, var(--verdigris) 30%, transparent); }
+.pill.part { background: var(--copper-wash); color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 30%, transparent); }
+.pill.no   { background: var(--surface-2); color: var(--muted); border: 1px solid var(--rule); }
+
+/* ── แผนต่อไป ──────────────────────────────────────────────────────────── */
+.plan { display: grid; gap: 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; margin-top: 8px; }
+.plan-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 6px 16px;
+  padding: 15px 18px;
+  border-top: 1px solid var(--rule-soft);
+  align-items: start;
+}
+.plan-item:first-child { border-top: 0; }
+@media (max-width: 640px) {
+  .plan-item { grid-template-columns: 30px minmax(0, 1fr); }
+  .plan-item .cost { grid-column: 2; justify-self: start; }
+}
+.plan-item b {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--copper);
+  line-height: 1.9;
+}
+.plan-item .what { display: grid; gap: 5px; }
+.plan-item .what strong { color: var(--ink); font-weight: 600; font-size: 15.5px; }
+.plan-item .what span { color: var(--ink-soft); font-size: 14.5px; line-height: 1.72; }
+.cost {
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  background: var(--surface-2);
+  white-space: nowrap;
+  line-height: 1.7;
+}
+.cost.free { color: var(--verdigris); border-color: color-mix(in srgb, var(--verdigris) 30%, transparent); background: var(--verd-wash); }
+.cost.paid { color: var(--copper); border-color: color-mix(in srgb, var(--copper) 30%, transparent); background: var(--copper-wash); }
+
 footer {
   margin-top: 44px;
   padding-top: 20px;
@@ -404,17 +553,17 @@ footer {
 
 <header class="masthead">
   <div class="eyebrow">Repository walkthrough</div>
-  <h1>96 ไฟล์</h1>
+  <h1>97 ไฟล์</h1>
   <p class="standfirst">
     ทุกโฟลเดอร์ ทุกไฟล์ในรีโป Go-on-GKE เรียงจากบนลงล่าง — แต่ละไฟล์คืออะไร
     และมีไว้ทำไม ลำดับตามโครงสร้างไฟล์จริง เลข Task ตามลำดับการสร้างใน
     <code>CLAUDE.md</code>
   </p>
   <div class="stats">
-    <div class="stat"><b>96</b><span>ไฟล์</span></div>
+    <div class="stat"><b>97</b><span>ไฟล์</span></div>
     <div class="stat"><b>9</b><span>Task (0–8)</span></div>
     <div class="stat"><b>8</b><span>README</span></div>
-    <div class="stat"><b>3</b><span>commit</span></div>
+    <div class="stat"><b>4</b><span>commit</span></div>
   </div>
 </header>
 
@@ -434,6 +583,9 @@ footer {
       <li><a href="#ansible">ansible/<i>24</i></a></li>
       <li><a href="#scripts">scripts/<i>1</i></a></li>
       <li><a href="#order">ลำดับที่ควรอ่าน</a></li>
+      <li><a href="#lifecycle">วงจรชีวิต — สร้าง</a></li>
+      <li><a href="#runtime">วงจรชีวิต — รัน</a></li>
+      <li><a href="#next">สถานะและแผนต่อไป</a></li>
     </ol>
   </nav>
 
@@ -490,6 +642,10 @@ footer {
       <div class="file">
         <div class="f-name">.yamllint.yml<em>28 บรรทัด</em></div>
         <div class="f-desc"><p>ผ่อนเรื่องความสวยงาม แต่เข้มตรงที่ YAML เปลี่ยนความหมาย — กฎ <code>truthy</code> ปฏิเสธ <code>yes/no/on/off</code> ซึ่ง YAML 1.1 อ่านเป็น boolean แต่ 1.2 ไม่ ในไฟล์ Kubernetes ความกำกวมนั้นคือบั๊กจริง ส่วน dashboard ถูกยกเว้นเพราะเป็น JSON ที่เครื่องสร้าง</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">repo-guide.html<em>1,104 บรรทัด</em></div>
+        <div class="f-desc"><p>หน้านี้เอง เปิดด้วยเบราว์เซอร์ได้ตรง ๆ ไม่ต้อง build ถูกกันออกจาก Docker build context ผ่าน <code>.dockerignore</code> เพราะขนาด 94 KB จะถูกส่งเข้า daemon ทุกครั้งที่ build โดยไม่มีประโยชน์ — และการตรวจสอบเรื่องนี้เองเป็นตัวที่ทำให้พบว่าไฟล์เครื่องมืออื่นหลุดเข้าไปอยู่ก่อนแล้ว</p></div>
       </div>
       <div class="file">
         <div class="f-name">app/ · docker/ · k8s/ · infra/<br>argocd/ · observability/<br>.github/ · ansible/ · scripts/<em>9 โฟลเดอร์</em></div>
@@ -1092,10 +1248,203 @@ footer {
     </div>
   </section>
 
+  <!-- ═══════════════════════ วงจรชีวิต: สร้างมาอย่างไร ══════════════════ -->
+  <section class="folder closing" id="lifecycle">
+    <h2>วงจรชีวิต — สร้างขึ้นมาอย่างไร</h2>
+    <p class="f-why">
+      ลำดับที่เกิดขึ้นจริง ไม่ใช่ลำดับที่วางแผนไว้ ในเก้าขั้นนี้ ปัญหาส่วนใหญ่ไม่ได้ถูกพบตอนเขียน
+      แต่ถูกพบตอน <em>รัน</em> — ซึ่งเป็นข้อสรุปหลักของทั้งโปรเจกต์
+    </p>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="p-num">0</div>
+        <div class="p-body">
+          <p class="p-title">มีแต่สเปก ยังไม่มีโค้ด</p>
+          <p>รีโปเริ่มต้นด้วยไฟล์เดียว คือ <code>CLAUDE.md</code> จึงเริ่มจากอ่านสเปกและหาจุดที่ขัดกันเอง ก่อนจะเขียนอะไรสักบรรทัด</p>
+          <div class="found"><b>พบ</b>ข้อขัดแย้ง 8 จุดที่จะโผล่กลางทาง — <code>spec.replicas</code> ชนกับ HPA และ selfHeal, Dataplane V2 ตั้งคู่กับ <code>network_policy</code> ไม่ได้, Task 2 push ขึ้น Docker Hub แต่ Task 4 ให้สิทธิ์ Artifact Registry, private control plane ที่ไม่บอกว่าจะ bootstrap อย่างไร, <code>deletion_protection</code> ที่ทำให้ destroy ไม่ได้, CI ที่ไม่ระบุ credential สำหรับ commit กลับ, Trivy gate ที่ไม่มี <code>--ignore-unfixed</code>, และ <code>readOnlyRootFilesystem</code> ที่ไม่มี volume ให้ <code>/tmp</code> — แก้สเปกให้จบก่อน</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">1</div>
+        <div class="p-body">
+          <p class="p-title">เห็นโค้ดจริง</p>
+          <p>ได้ <code>go.mod</code> (Go 1.21.4) กับ <code>main.go</code> ที่เป็น hello-world ยืนยันว่ามันทำตาม contract §1.1 ไม่ได้เลย</p>
+          <div class="found"><b>พบ</b>route <code>/</code> เป็น catch-all จะทำให้ probe ทั้งสามผ่านแบบหลอก · ไม่จับ SIGTERM ทำให้คำสัญญา zero-downtime เป็นโมฆะ · reflected XSS จากการไม่ตั้ง Content-Type · และไม่มี dependency เลยจึงไม่มี <code>go.sum</code> ทำให้คำสั่ง <code>COPY go.mod go.sum</code> ในสเปกจะทำให้ build ล้มทันที</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">2</div>
+        <div class="p-body">
+          <p class="p-title">Task 0 — ทำให้แอปพร้อม</p>
+          <p>แยกเป็น <code>config.go</code> / <code>server.go</code> / <code>telemetry.go</code> / <code>main.go</code> พร้อมเทสต์ 9 ตัว รันทุกคำสั่ง Go ผ่าน container เพราะเครื่องไม่ได้ติดตั้ง Go</p>
+          <div class="found"><b>พบ</b>ต้องบัมพ์ Go 1.21.4 → 1.26 ไม่ใช่ทางเลือก — <code>prometheus/client_golang</code> ต้องการ ≥1.25 และ 1.23 ก็หมด support แล้ว</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">3</div>
+        <div class="p-body">
+          <p class="p-title">Task 1–2 — image</p>
+          <p>Multi-stage ไป distroless pin ด้วย digest build ได้ 29 MB, Trivy 0 ช่องโหว่, ทดสอบ SIGTERM จริงด้วย <code>docker kill</code></p>
+          <div class="found"><b>พบ</b><code>.dockerignore</code> ที่วางใน <code>docker/</code> ตามสเปก จะไม่ถูกอ่านเลย · และ check static-link ที่ใช้ <code>ldd | grep</code> โดน hadolint ฟ้อง แต่การใส่ <code>-o pipefail</code> ตามคำแนะนำกลับทำให้ check พังในกรณีสำเร็จ เพราะ <code>ldd</code> คืน exit non-zero พอดีตอนที่ binary เป็น static</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">4</div>
+        <div class="p-body">
+          <p class="p-title">Task 3 — manifest แล้วเอาไปรันจริง</p>
+          <p>เขียน Kustomize แล้ว deploy ลง kind cluster จริง ไม่ใช่แค่ <code>kustomize build</code> ผ่าน จากนั้นยิงโหลดต่อเนื่องระหว่าง rolling update แล้วนับ request ที่หลุด</p>
+          <div class="found"><b>พบ</b>ค่า <code>SHUTDOWN_DELAY=1s</code> ที่ตั้งไว้ใน dev overlay ทำให้หลุด 15 จาก 10,486 request พอเปลี่ยนเป็น 5s เหลือ 0 จาก 8,017 — ตัวเลขนี้คือหลักฐานว่า <code>maxUnavailable: 0</code> อย่างเดียวไม่พอ และเป็นเหตุผลที่ dev ต้องใช้ค่าเดียวกับ prod</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">5</div>
+        <div class="p-body">
+          <p class="p-title">Task 4–8 — โครงสร้างพื้นฐานและงานที่เหลือ</p>
+          <p>Terraform (3 โมดูล), ArgoCD (2 project 6 Application), LGTM stack, CI/CD และ Ansible 4 role เขียนต่อเนื่องกัน โดยรัน <code>terraform validate</code> และ linter ระหว่างทาง</p>
+          <div class="found"><b>พบ</b>variable validation ที่ปฏิเสธ <code>0.0.0.0/0</code> ทำงานจริงตามที่ตั้งใจ (ทดสอบด้วย local backend override) · และ <code>trusted-registries</code> ใน <code>trivy.yaml</code> ไม่มีผลเลย จึงย้ายไปใช้ <code>.trivyignore</code> ซึ่งเป็นกลไกที่รองรับจริง แทนที่จะเก็บ config ที่ดูเหมือนแก้แล้วแต่ไม่แก้</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">6</div>
+        <div class="p-body">
+          <p class="p-title">กวาด linter ทั้งรีโป</p>
+          <p>hadolint, ansible-lint, yamllint, actionlint, shellcheck, kubeconform, gitleaks, Trivy ทั้ง image และ IaC</p>
+          <div class="found"><b>พบ</b>invariant check ที่เขียน inline ใน workflow มีบั๊ก 3 ตัว: grep ไปจับ comment ที่อธิบายกฎของตัวเอง · check "ไม่มี kubectl" grep ที่ <code>.github/workflows/</code> จึงจับชื่อ step ของตัวเอง · และอีกสอง check anchor หลวมจนจับข้อความบรรยาย ย้ายทั้งหมดไป <code>scripts/check-invariants.sh</code> ซึ่งได้ผลพลอยได้ว่ารันในเครื่องได้</div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">7</div>
+        <div class="p-body">
+          <p class="p-title">git init</p>
+          <p>ทั้งโปรเจกต์เป็น GitOps แต่ตัวมันเองยังไม่เป็น git repo จนถึงขั้นนี้</p>
+          <div class="found"><b>พบ</b><code>core.autocrlf=true</code> ระดับ system — clone ครั้งถัดไปบน Windows จะได้ CRLF แล้วค่าใน <code>config.env</code> จะกลายเป็น <code>"5s\r"</code> ทำให้ pod crash-loop ส่วน systemd unit จะโหลดไม่ได้ กันด้วย <code>.gitattributes</code></div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="p-num">8</div>
+        <div class="p-body">
+          <p class="p-title">เอกสาร — หน้านี้เอง</p>
+          <p>เขียนคำอธิบายทุกไฟล์ แล้ววางไฟล์ HTML ไว้ที่ root ของรีโป</p>
+          <div class="found"><b>พบ</b>ตอนตรวจว่าไฟล์ใหม่เข้า Docker build context ไหม (ด้วย probe <code>COPY . /ctx</code>) เจอว่า <code>trivy.yaml</code>, <code>.yamllint.yml</code> และ <code>scripts/</code> หลุดเข้าไปอยู่ก่อนแล้ว เพราะถูกเพิ่มเข้ารีโปหลังจากเขียน <code>.dockerignore</code> ไปแล้ว — เป็นเหตุผลว่าทำไมควร probe context เป็นระยะ ไม่ใช่เชื่อว่า ignore file ตามทัน</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>ข้อสรุปของทั้งเก้าขั้น</b> บั๊กที่สำคัญเกือบทุกตัวในรายการนี้ผ่าน code review ได้สบาย ๆ เพราะมันดูถูกต้อง — <code>pipefail</code> ที่กลับหัว, check ที่จับตัวเอง, ignore file ที่ตามไม่ทัน, drain delay ที่สั้นไป 4 วินาที ทั้งหมดถูกพบเพราะ<strong>เอาไปรันแล้ววัดผล</strong> ไม่ใช่เพราะอ่านโค้ดซ้ำ</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ วงจรชีวิต: รันอย่างไร ══════════════════════ -->
+  <section class="folder closing" id="runtime">
+    <h2>วงจรชีวิต — โค้ดเดินทางอย่างไร</h2>
+    <p class="f-why">
+      จากที่ developer กด commit จนถึง pod รับ traffic และวนกลับ ทุกลูกศรในนี้เป็นระบบอัตโนมัติ
+      ยกเว้นขั้นที่ระบุไว้ว่าต้องใช้คน
+    </p>
+
+    <div class="order">
+      <div class="step"><b>1</b><span><strong>commit</strong> — developer merge เข้า <code>main</code> โค้ดแอปหรือ <code>config.env</code> ก็เดินทางเส้นเดียวกัน</span></div>
+      <div class="step"><b>2</b><span><strong>CI: test</strong> — <code>gofmt</code>, <code>go vet</code>, <code>go test -race</code> ถ้าไม่ผ่านจบตรงนี้ ไม่มีการ build</span></div>
+      <div class="step"><b>3</b><span><strong>CI: invariants</strong> — กฎ 7 ข้อของรีโป แล้ว render manifest ทั้งสอง overlay ผ่าน kubeconform และสแกน IaC บนผลที่ render แล้ว</span></div>
+      <div class="step"><b>4</b><span><strong>CI: build → scan → push</strong> — build ลง tarball ในเครื่องก่อน สแกน Trivy แล้วจึง push ขึ้น Docker Hub ด้วย tag <code>sha-&lt;sha&gt;</code> ลำดับนี้สำคัญ: สแกนหลัง push แปลว่า image ที่มีช่องโหว่ถูกดึงไปใช้ได้แล้ว</span></div>
+      <div class="step"><b>5</b><span><strong>CI: bump</strong> — <code>kustomize edit set image</code> เขียน path ของ Artifact Registry ด้วย tag เดิม แล้ว commit กลับพร้อม <code>[skip ci]</code> นี่คือการเขียนออกไปข้างนอกอย่างเดียวที่ CI ทำ</span></div>
+      <div class="step"><b>6</b><span><strong>ArgoCD sync</strong> — ArgoCD ที่อยู่ในคลัสเตอร์เห็น commit แล้ว apply เอง CI ไม่เคยแตะคลัสเตอร์</span></div>
+      <div class="step"><b>7</b><span><strong>GKE ดึง image</strong> — ผ่าน Artifact Registry remote repo ไม่ใช่จาก Docker Hub ตรง ๆ เพื่อไม่ให้ทั้งคลัสเตอร์แชร์ rate limit ของ NAT IP เดียว</span></div>
+      <div class="step"><b>8</b><span><strong>pod เริ่มทำงาน</strong> — startupProbe เปิดทางให้ก่อน (30 × 2 วินาที) แล้ว readinessProbe จึงปล่อยให้ traffic เข้า ส่วน livenessProbe เฝ้าดูว่าโพรเซสค้างไหม โดยไม่แตะ dependency</span></div>
+      <div class="step"><b>9</b><span><strong>rollout จบแบบไม่มี downtime</strong> — pod เก่าได้ SIGTERM → <code>/readyz</code> เป็น 503 ทันที → รอ 5 วินาทีให้ EndpointSlice อัปเดต → drain request ที่ค้าง → flush trace แล้วออกด้วย exit 0</span></div>
+      <div class="step"><b>10</b><span><strong>สังเกตการณ์</strong> — metrics เข้า Prometheus ผ่าน ServiceMonitor, log เข้า Loki ผ่าน Alloy, trace เข้า Tempo ผ่าน OTLP ทั้งสามผูกกันด้วย <code>trace_id</code></span></div>
+      <div class="step"><b>11</b><span><strong>scale</strong> — HPA ปรับ 2–6 replica ตาม CPU เทียบ request โดย ArgoCD ไม่กดกลับ เพราะมี <code>ignoreDifferences</code> คู่กับ <code>RespectIgnoreDifferences</code></span></div>
+      <div class="step"><b>12</b><span><strong>rollback</strong> — <code>git revert</code> แล้ว ArgoCD sync กลับ tag เดิม ไม่มีเครื่องมือแยกที่พฤติกรรมต่างจากเส้นทาง deploy</span></div>
+      <div class="step"><b>13</b><span><strong>เก็บของ</strong> — <code>terraform apply -var deletion_protection=false</code> แล้วจึง <code>terraform destroy</code> สองขั้น เรียงลำดับ <em>ต้องใช้คน โดยเจตนา</em></span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ สถานะและแผนต่อไป ═══════════════════════════ -->
+  <section class="folder closing" id="next">
+    <h2>สถานะจริง และแผนต่อไป</h2>
+    <p class="f-why">
+      "เขียนเสร็จ" กับ "รันแล้ว" ไม่ใช่เรื่องเดียวกัน ตารางนี้แยกสองอย่างนั้นออกจากกัน
+      เพราะทุกบั๊กในไทม์ไลน์ข้างบนอยู่ในช่องว่างระหว่างสองคำนี้
+    </p>
+
+    <div class="status-wrap">
+      <table class="status">
+        <thead>
+          <tr><th>Task</th><th>สถานะ</th><th>หลักฐาน / สิ่งที่ยังขาด</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0 · app</td><td><span class="pill run">รันแล้ว</span></td><td>เทสต์ 9/9 ผ่าน <code>-race</code>, vet และ gofmt สะอาด</td></tr>
+          <tr><td>1 · image</td><td><span class="pill run">รันแล้ว</span></td><td>build จริง 29 MB, Trivy 0, ทดสอบ drain ด้วย <code>docker kill</code></td></tr>
+          <tr><td>2 · push</td><td><span class="pill part">ยังไม่ push</span></td><td>คำสั่งพร้อมและทดสอบในเครื่องแล้ว แต่ยังไม่มีบัญชี Docker Hub จึงยังไม่มี URL และ digest จริง</td></tr>
+          <tr><td>3 · Kustomize</td><td><span class="pill run">รันแล้ว</span></td><td>deploy ลง kind, วัด zero-downtime ได้ 0/8,017</td></tr>
+          <tr><td>4 · Terraform</td><td><span class="pill part">validate แล้ว</span></td><td><code>fmt</code>, <code>validate</code> และ variable validation ผ่าน แต่ยังไม่เคย <code>apply</code> เพราะยังไม่มี GCP project</td></tr>
+          <tr><td>5 · ArgoCD</td><td><span class="pill no">ยังไม่รัน</span></td><td>manifest ผ่าน kubeconform แต่ยังไม่เคยเห็น Application sync จริง</td></tr>
+          <tr><td>6 · LGTM</td><td><span class="pill no">ยังไม่รัน</span></td><td>values และ dashboard พร้อม แต่ยังไม่เคยเห็น correlation ทำงาน — ซึ่งเป็นจุดขายของงานนี้</td></tr>
+          <tr><td>7 · CI/CD</td><td><span class="pill part">lint แล้ว</span></td><td>actionlint สะอาด แต่ยังไม่มี GitHub repo จึงยังไม่เคยมี workflow run จริง</td></tr>
+          <tr><td>8 · Ansible</td><td><span class="pill no">ยังไม่รัน</span></td><td>ansible-lint ผ่านโปรไฟล์ production แต่ยังไม่เคยพิสูจน์ <code>changed=0</code> บนเครื่องจริง</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="f-why" style="margin-top:22px">
+      แผนต่อไปจึงเรียงตาม <strong>ช่องว่างที่ใหญ่ที่สุดก่อน</strong> ไม่ใช่ตามลำดับ Task
+      และตั้งใจดันงานที่ไม่มีค่าใช้จ่ายขึ้นมาก่อน เพื่อให้ตอนขึ้น GCP จริงเหลือแค่ครั้งเดียว
+    </p>
+
+    <div class="plan">
+      <div class="plan-item">
+        <b>1</b>
+        <div class="what">
+          <strong>สร้าง kind cluster ใหม่ แล้ว bootstrap ArgoCD + LGTM</strong>
+          <span>ปิดช่องว่างใหญ่ที่สุดในตารางข้างบนทีเดียวสองข้อ พิสูจน์ Task 5 (Application sync, selfHeal ไม่ชน HPA, rollback ด้วย <code>git revert</code>) และ Task 6 (metric→trace→log correlation ซึ่งเป็นจุดขายและยังไม่เคยเห็นทำงาน) พร้อม commit <code>kind/kind-config.yaml</code> เข้ารีโปเพื่อให้ทำซ้ำได้</span>
+        </div>
+        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
+      </div>
+      <div class="plan-item">
+        <b>2</b>
+        <div class="what">
+          <strong>ทดสอบ Ansible บน Multipass VM</strong>
+          <span>รัน playbook สองครั้ง แล้วยืนยันว่าครั้งที่สองได้ <code>changed=0</code> จริง ซึ่งเป็นเกณฑ์ตัดสินของ Task 8 และเป็นสิ่งเดียวที่ linter พิสูจน์แทนไม่ได้</span>
+        </div>
+        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
+      </div>
+      <div class="plan-item">
+        <b>3</b>
+        <div class="what">
+          <strong>สร้าง GitHub repo และ Docker Hub แล้วปล่อย pipeline วิ่ง</strong>
+          <span>ต้องการจากคุณ: บัญชี Docker Hub (repo ต้องเป็น public เพราะ AR remote ดึงแบบ anonymous) และ GitHub repo พร้อมตั้ง secret/variable ที่ workflow อ้างถึง จากนั้นจะได้ทั้ง Task 2 (URL + digest จริง) และ Task 7 (workflow run จริง) ในคราวเดียว</span>
+        </div>
+        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
+      </div>
+      <div class="plan-item">
+        <b>4</b>
+        <div class="what">
+          <strong>ขึ้น GKE จริงครั้งเดียว เก็บหลักฐาน แล้วรื้อ</strong>
+          <span>ทำเป็นลำดับสุดท้ายโดยตั้งใจ เพราะเมื่อถึงตอนนั้นทุกอย่างถูกพิสูจน์บน kind แล้ว เหลือแค่พิสูจน์ตัว Terraform กับ Workload Identity คลัสเตอร์กินราว 8–13 ดอลลาร์ต่อวัน จึงควรจบใน session เดียว: <code>apply</code> → capture → teardown สองขั้น</span>
+        </div>
+        <span class="cost paid">มีค่าใช้จ่าย</span>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><b>สิ่งที่ต้องได้จากคุณก่อนเริ่มข้อ 3</b> placeholder สี่ตัวที่ตั้งใจไม่ commit ไว้ในรีโป: <code>PROJECT_ID</code>, <code>DOCKERHUB_USER</code>, <code>GH_OWNER/GH_REPO</code> และชื่อ bucket ของ tfstate ข้อ 1 กับ 2 เริ่มได้เลยโดยไม่ต้องใช้อะไรเพิ่ม</p>
+    </div>
+  </section>
+
   <footer>
-    <span>96 ไฟล์</span>
-    <span>3 commit</span>
-    <span>Task 0–8 เสร็จครบ</span>
+    <span>97 ไฟล์</span>
+    <span>4 commit</span>
+    <span>Task 0–8 เขียนครบ · 3 ยังไม่ได้รัน</span>
     <span>ข้อมูล ณ 27 ส.ค. 2026</span>
   </footer>
 
