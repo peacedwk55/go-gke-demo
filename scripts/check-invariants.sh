@@ -131,6 +131,23 @@ for d in app docker k8s infra/terraform argocd observability ansible; do
 done
 check "every top-level directory has a README" "$missing"
 
+# ── 8. Standalone HTML declares its encoding ────────────────────────────────
+# repo-guide.html is authored as an Artifact fragment, where the platform
+# supplies <head> at publish time. Opened as a local file that same content has
+# no charset declaration, a browser falls back to a legacy single-byte encoding,
+# and every Thai character renders as mojibake. The bytes are valid UTF-8; only
+# the declaration is missing — which is exactly the kind of bug that survives
+# review, because the published page looks fine.
+#
+# Browsers stop looking for a charset after the first 1024 bytes, so checking
+# the whole file would pass while the browser still ignored it.
+noenc=""
+for f in *.html; do
+    [ -f "$f" ] || continue
+    head -c 1024 "$f" | grep -qi 'charset' || noenc="${noenc}${noenc:+, }$f"
+done
+check "root HTML declares charset in the first 1024 bytes" "$noenc"
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "One or more invariants failed."
