@@ -164,6 +164,26 @@ check "root HTML declares charset in the first 1024 bytes" "$noenc"
 # actionlint cannot catch it: verifying that a tag exists needs a network call,
 # and actionlint deliberately makes none. So a linter pass is not evidence that
 # the workflow can start.
+#
+# ── What this check does NOT cover ──────────────────────────────────────────
+#
+# Only top-level `uses:` refs in our own workflows. Composite actions carry
+# their own nested `uses:`, resolved at the same "Set up job" moment, and those
+# are invisible here.
+#
+# That gap is not hypothetical — it is the second failure this repository hit:
+#
+#   trivy-action@v0.28.0  ->  uses: aquasecurity/setup-trivy@v0.2.1
+#
+# That inner tag had been deleted upstream (404; setup-trivy now publishes
+# v0.2.6 and later), so v0.28.0 of trivy-action is permanently unusable and the
+# job fails at setup naming neither action. This check passed on it, because the
+# ref WE wrote was valid.
+#
+# Chasing nested refs recursively would be fragile and still incomplete. The
+# real protection is upstream's own fix: newer trivy-action versions pin
+# setup-trivy by commit SHA rather than by tag, which cannot be retagged out
+# from under them. Same reason a SHA beats a tag in our own workflows.
 if [ "${SKIP_NETWORK_CHECKS:-}" = "1" ]; then
     printf '  %sSKIP%s  action refs resolve (SKIP_NETWORK_CHECKS=1)\n' "$RED" "$RESET"
 elif ! curl -sf -m 5 -o /dev/null https://api.github.com/rate_limit 2>/dev/null; then

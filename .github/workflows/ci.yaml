@@ -127,9 +127,10 @@ jobs:
           done
 
       - name: Trivy IaC scan — on RENDERED manifests
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: config
+          version: v0.74.0
           # `rendered/`, NOT the source tree, and this matters.
           #
           # Scanning k8s/ directly makes Trivy read each file in
@@ -197,9 +198,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan — gate on CRITICAL
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          version: v0.74.0
           format: table
           severity: CRITICAL
           exit-code: "1"
@@ -214,9 +216,10 @@ jobs:
           TRIVY_DB_REPOSITORY: mirror.gcr.io/aquasec/trivy-db:2
 
       - name: Report HIGH (informational, does not fail)
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          version: v0.74.0
           format: table
           severity: HIGH
           exit-code: "0"
