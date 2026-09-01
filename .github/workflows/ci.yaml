@@ -26,10 +26,32 @@ on:
     #
     # Documentation is excluded for a second, separate reason: it cannot change
     # the image, so rebuilding on a docs commit would push a fresh sha- tag for
-    # a byte-identical binary and bump the manifest to it — which is a real
-    # production rollout, caused by editing a paragraph. Observed on 863b908,
-    # a commit that touched only *.md and root *.html: the .md files were
-    # already excluded, the .html files were not.
+    # a byte-identical binary and bump the manifest to it — a real production
+    # rollout, caused by editing a paragraph. `**/*.md` covered that; the root
+    # *.html pages did not, so `*.html` is here now.
+    #
+    # CORRECTION, and the more useful lesson. This entry was first justified by
+    # claiming 863b908 — a docs-only commit — had triggered a build. It had not.
+    # It produced no run at all, and path filters were not the reason:
+    #
+    #   its commit message DESCRIBED the loop protection, and in doing so
+    #   contained the literal skip token
+    #
+    # GitHub scans the whole commit message, not just the subject, so quoting the
+    # token is indistinguishable from using it. The docs commit silently opted
+    # itself out of CI. It was only noticeable because the run NUMBERS skipped:
+    # CI #7 was the commit before it, CI #8 the commit after.
+    #
+    # Harmless on a docs commit. Not harmless in general: a code commit whose
+    # message merely MENTIONS the token — a changelog entry, a note about this
+    # very mechanism — lands on main with no tests, no scan and no image, and
+    # nothing reports it, because a missing run looks exactly like a filtered
+    # path.
+    #
+    # So never write the token in a message unless you mean it; say "the skip
+    # token" in prose. Inside these files it is safe — a comment in ci.yaml is
+    # not a commit message. Invariant 10 in scripts/check-invariants.sh guards
+    # the commits you are about to push, since CI structurally cannot.
     paths-ignore:
       - "k8s/overlays/**"
       - "**/*.md"

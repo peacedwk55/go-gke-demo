@@ -241,6 +241,59 @@ else
     fi
 fi
 
+# ── 10. No accidental CI skip token in the commits about to be pushed ───────
+#
+# GitHub scans the ENTIRE commit message for the CI skip tokens, body as well as
+# subject. Quoting one is therefore indistinguishable from using it.
+#
+# That happened here. 863b908 was a docs commit whose message explained the loop
+# protection and, in explaining it, contained the token. It produced no workflow
+# run at all — and a missing run looks exactly like a path-filtered push, so
+# nothing pointed at the cause. It surfaced only because the run NUMBERS skipped:
+# CI #7 was the commit before it and CI #8 the commit after.
+#
+# On a docs commit that costs nothing. On a code commit it means the tests, the
+# Trivy scan and the image build are all silently skipped, and main now carries
+# unverified code.
+#
+# ── Why this is scoped to unpushed commits ─────────────────────────────────
+#
+# Because CI structurally CANNOT catch this: the offending commit is precisely
+# the one that gets no run, so a check living only in CI is blind to it by
+# definition. The useful moment is before the push, on a laptop — the same reason
+# every invariant here is runnable locally.
+#
+# In CI the range is empty and this check is a no-op, and it says so rather than
+# printing a green that would be meaningless.
+SKIP_RE='\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'
+
+if ! git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    printf '  %sSKIP%s  no accidental skip token in unpushed commits (no origin/main)\n' "$RED" "$RESET"
+elif [ -z "$(git rev-list origin/main..HEAD 2>/dev/null)" ]; then
+    printf '  %sSKIP%s  no accidental skip token in unpushed commits (nothing unpushed)\n' "$RED" "$RESET"
+else
+    offenders=""
+    while IFS= read -r sha; do
+        [ -n "$sha" ] || continue
+        # The bump commit uses the token deliberately; that is the loop
+        # protection working, not a mistake.
+        case "$(git log -1 --format=%s "$sha")" in
+            'chore(deploy):'*) continue ;;
+        esac
+        if git log -1 --format=%B "$sha" | grep -qiE "$SKIP_RE"; then
+            offenders="${offenders}${offenders:+$'\n'}$(git log -1 --format='%h %s' "$sha")"
+        fi
+    done < <(git rev-list origin/main..HEAD)
+    if [ -n "$offenders" ]; then
+        fail "no accidental skip token in unpushed commits"
+        printf '%s\n' "$offenders" | sed 's/^/          /'
+        printf '        These commits get NO workflow run at all.\n'
+        printf '        Write "the skip token" in prose instead of the literal text.\n'
+    else
+        pass "no accidental skip token in unpushed commits"
+    fi
+fi
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "One or more invariants failed."
