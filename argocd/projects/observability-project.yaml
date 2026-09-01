@@ -21,7 +21,7 @@ spec:
 
   sourceRepos:
     # Our repo, for the Helm values files.
-    - https://github.com/GH_OWNER/GH_REPO.git
+    - https://github.com/peacedwk55/go-gke-demo.git
     # Upstream chart repositories. Enumerated explicitly rather than "*" so a
     # chart cannot be pulled from an arbitrary registry.
     - https://prometheus-community.github.io/helm-charts

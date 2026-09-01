@@ -18,7 +18,7 @@ spec:
   project: go-sample-app
 
   source:
-    repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    repoURL: https://github.com/peacedwk55/go-gke-demo.git
     targetRevision: main
     # A Kustomize overlay path in Git — not a local path, and not Helm. The
     # overlay is the single source of truth for what runs in prod, and the image

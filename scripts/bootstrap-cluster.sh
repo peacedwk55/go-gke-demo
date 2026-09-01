@@ -87,15 +87,46 @@ for f in k8s/overlays/prod/kustomization.yaml \
     ok "$f"
 done
 
-# Fail loudly if any placeholder survived — a leftover one means a silent
-# misconfiguration later, which is exactly what this check exists to prevent.
-if grep -rn 'PROJECT_ID\|DOCKERHUB_USER\|GH_OWNER' k8s/ argocd/ 2>/dev/null; then
-    die "placeholders remain — see the lines above"
+# Fail loudly if any placeholder survived in a MANIFEST — a leftover one means a
+# silent misconfiguration later, which is exactly what this check exists to
+# prevent.
+#
+# READMEs are excluded on purpose, and not as a convenience: they document the
+# substitution itself, so the placeholder text is the correct content there. An
+# unfiltered grep flags them and fails a run that is actually fine — which it
+# did, the first time this script was written.
+if grep -rn --include='*.yaml' --include='*.yml' --include='*.env' \
+        'PROJECT_ID\|DOCKERHUB_USER\|GH_OWNER' k8s/ argocd/ 2>/dev/null; then
+    die "placeholders remain in a manifest — see the lines above"
 fi
-ok "no placeholders remain"
+ok "no placeholders remain in manifests"
 
 # ─────────────────────────────────────────────────────────────────────────────
-step "3. kubectl credentials"
+step "3. Confirm Git is ahead of the cluster, not behind it"
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The substitution above changed files on THIS machine. ArgoCD pulls from
+# GitHub. If those changes are not pushed, ArgoCD syncs the previous content —
+# placeholders and all — and the failure looks like ImagePullBackOff on an image
+# called "DOCKERHUB_USER/go-sample-app", which takes a while to trace back here.
+#
+# The script does not push on your behalf: committing to a repository is your
+# decision, not a side effect of a bootstrap. It refuses to continue instead.
+if [ -n "$(git status --porcelain)" ]; then
+    printf '\n'
+    git status --short | sed 's/^/     /'
+    die "uncommitted changes — commit and push them first, or ArgoCD will sync the old manifests"
+fi
+
+git fetch --quiet origin 2>/dev/null || die "cannot reach origin — is the remote set?"
+LOCAL="$(git rev-parse HEAD)"
+REMOTE="$(git rev-parse '@{upstream}' 2>/dev/null || true)"
+[ -n "$REMOTE" ] || die "no upstream branch — run: git push -u origin main"
+[ "$LOCAL" = "$REMOTE" ] || die "HEAD is not pushed ($(git rev-list --count '@{upstream}..HEAD') commit(s) ahead) — run: git push"
+ok "working tree clean and HEAD pushed — ArgoCD will pull what you just built"
+
+# ─────────────────────────────────────────────────────────────────────────────
+step "4. kubectl credentials"
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # This only works if your public IP is still in master_authorized_networks. If
@@ -107,7 +138,7 @@ ok "connected"
 kubectl get nodes -o custom-columns=NODE:.metadata.name,ZONE:.metadata.labels.'topology\.kubernetes\.io/zone',READY:.status.conditions[-1].type --no-headers
 
 # ─────────────────────────────────────────────────────────────────────────────
-step "4. Install ArgoCD"
+step "5. Install ArgoCD"
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # ArgoCD does not manage its own installation here — that would be circular.
@@ -120,7 +151,7 @@ kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=300s
 ok "ArgoCD ${ARGOCD_VERSION} ready"
 
 # ─────────────────────────────────────────────────────────────────────────────
-step "5. Grafana admin secret"
+step "6. Grafana admin secret"
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Created out of band, never committed. observability/kube-prometheus-stack
@@ -141,7 +172,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-step "6. Hand control to Git"
+step "7. Hand control to Git"
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # From this point on, the cluster's contents are whatever is in the repository.

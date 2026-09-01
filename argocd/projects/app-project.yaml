@@ -25,7 +25,7 @@ spec:
   # Only this repository. An Application in this project cannot be pointed at
   # an attacker-controlled repo, even by someone with ArgoCD API access.
   sourceRepos:
-    - https://github.com/GH_OWNER/GH_REPO.git
+    - https://github.com/peacedwk55/go-gke-demo.git
 
   # Only the prod namespace, only the in-cluster API server.
   destinations:

@@ -59,13 +59,30 @@ pull:  <region>-docker.pkg.dev/<project>/dockerhub-remote/<user>/go-sample-app:v
 A remote repository is a read-through cache: **it cannot be pushed to.** Do not point the build
 command at the Artifact Registry URL.
 
-### Record the digest
+### The published image
+
+**https://hub.docker.com/r/dockerpeace/go-sample-app**
+
+| | |
+|---|---|
+| Tag | `v1.0.0` |
+| Digest | `sha256:8357fe65123debb9f2f85017d56d75f7ce62bc19ad448f08dd56d51cc94f719c` |
+| Platform | `linux/amd64` |
+| Source | `https://github.com/peacedwk55/go-gke-demo` |
+| Revision | `2909d3b30c1ae7dda76aa781caa4b25b736a8960` |
+
+A tag is a mutable pointer; the digest is the artefact. Read it back from the registry rather than
+from a local image, so what is recorded is what was actually published:
 
 ```bash
-docker buildx imagetools inspect ${DOCKERHUB_USER}/go-sample-app:${TAG} --format '{{.Manifest.Digest}}'
+docker buildx imagetools inspect dockerpeace/go-sample-app:v1.0.0
 ```
 
-Record it in the top-level `README.md`. A tag is a mutable pointer; the digest is the artefact.
+`image.source` and `image.revision` are build args rather than hardcoded values. An earlier version
+of the Dockerfile baked `https://github.com/<gh-owner>/<gh-repo>` — a literal placeholder — into the
+label. That is worse than omitting the label: it looks like supply-chain traceability and points
+nowhere. Caught before the first push, which mattered because re-pushing to fix it would have left
+the digest recorded above pointing at a superseded image.
 
 ## Local verification
 

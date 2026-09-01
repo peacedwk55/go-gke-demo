@@ -8,9 +8,9 @@ output "app_service_account_email" {
   value       = google_service_account.app.email
 }
 
-output "workload_identity_member" {
-  description = "The KSA identity granted workloadIdentityUser. Printed so the binding can be verified against the deployed KSA without reading state."
-  value       = google_service_account_iam_member.workload_identity.member
+output "app_service_account_id" {
+  description = "Fully qualified GSA resource name. Consumed by the root module, which owns the Workload Identity binding because that binding must be created after the cluster."
+  value       = google_service_account.app.name
 }
 
 output "ksa_annotation" {

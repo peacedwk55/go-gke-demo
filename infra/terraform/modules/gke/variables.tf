@@ -106,16 +106,41 @@ variable "disk_size_gb" {
   default     = 50
 }
 
-variable "min_nodes_per_zone" {
-  description = "Autoscaler floor PER ZONE. 1 x 3 zones = a floor of 3 nodes. Must stay >= 1 so the zonal PVCs of the LGTM stack always have a node available in their zone -- see observability/README.md."
-  type        = number
-  default     = 1
-}
+variable "min_nodes_total" {
+  description = <<-EOT
+    Autoscaler floor, TOTAL across the region — not per zone.
 
-variable "max_nodes_per_zone" {
-  description = "Autoscaler ceiling PER ZONE. 3 x 3 zones = a ceiling of 9 nodes."
+    Must stay >= 3 on a three-zone regional cluster, for two separate reasons:
+
+      1. The topologySpreadConstraints and pod anti-affinity in
+         k8s/base/deployment.yaml need more than one zone and more than one node
+         to mean anything at all.
+      2. The LGTM stack's PVCs bind to ZONAL disks, which pin each pod to one
+         zone for the life of the volume. Drop below one node per zone and those
+         pods go Pending with no way to recover — see observability/README.md.
+
+    Expressed as a total rather than per-zone because the per-zone form did not
+    behave as documented: min_node_count = 1 across three zones produced a
+    single node, and stayed there. See the autoscaling block in main.tf.
+  EOT
   type        = number
   default     = 3
+
+  validation {
+    condition     = var.min_nodes_total >= 3
+    error_message = "min_nodes_total must be at least 3 — one node per zone. Fewer leaves the observability stack's zonal PVCs unschedulable and makes the zone-spreading in the Deployment meaningless."
+  }
+}
+
+variable "max_nodes_total" {
+  description = "Autoscaler ceiling, TOTAL across the region. 9 leaves each of three zones room to reach 3 nodes."
+  type        = number
+  default     = 9
+
+  validation {
+    condition     = var.max_nodes_total >= var.min_nodes_total
+    error_message = "max_nodes_total must be >= min_nodes_total."
+  }
 }
 
 # ── Optional hardening ──────────────────────────────────────────────────────

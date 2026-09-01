@@ -139,12 +139,56 @@ module "gke" {
   node_service_account_email = module.iam.node_service_account_email
   master_authorized_networks = var.master_authorized_networks
 
-  machine_type       = var.machine_type
-  disk_type          = var.disk_type
-  disk_size_gb       = var.disk_size_gb
-  min_nodes_per_zone = var.min_nodes_per_zone
-  max_nodes_per_zone = var.max_nodes_per_zone
+  machine_type    = var.machine_type
+  disk_type       = var.disk_type
+  disk_size_gb    = var.disk_size_gb
+  min_nodes_total = var.min_nodes_total
+  max_nodes_total = var.max_nodes_total
 
   spot                = var.spot
   deletion_protection = var.deletion_protection
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The Workload Identity binding — the whole answer to "deploy without keys".
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Why this is here rather than inside modules/iam
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# It was in the iam module, and the first apply failed on it:
+#
+#   Error 400: Identity Pool does not exist (<project>.svc.id.goog)
+#
+# The pool named in the member string is not a pre-existing project resource —
+# GKE creates it as a side effect of workload_identity_config on the cluster. So
+# the binding must come after the cluster.
+#
+# It cannot express that from inside the iam module: the gke module already
+# consumes iam's node service account, so `depends_on = [module.gke]` there
+# would close a cycle. The root module can see both, so the ordering lives here.
+#
+# This corrects an earlier claim in infra/terraform/README.md that there was no
+# ordering dependency at all. That was true of the namespace and the KSA — which
+# genuinely need not exist yet, and still do not at this point — and false of the
+# pool.
+#
+# google_service_account_iam_member, not _binding: the _binding form is
+# authoritative and would silently delete any other binding on this GSA that
+# Terraform does not know about.
+resource "google_service_account_iam_member" "workload_identity" {
+  service_account_id = module.iam.app_service_account_id
+  role               = "roles/iam.workloadIdentityUser"
+
+  # Scoped as tightly as the mechanism allows: one KSA, in one namespace, in one
+  # cluster's pool. A pod in another namespace, or under a differently-named
+  # KSA, cannot impersonate this GSA even if an attacker can create pods.
+  member = "serviceAccount:${module.gke.workload_identity_pool}[${var.ksa_namespace}/${var.ksa_name}]"
+
+  # The member string above already references module.gke, so Terraform derives
+  # the ordering from that reference alone. depends_on is stated anyway because
+  # the constraint is not obvious from reading the string — someone
+  # "simplifying" it back to "${var.project_id}.svc.id.goog" would silently
+  # remove the dependency and reintroduce the failure above.
+  depends_on = [module.gke]
 }

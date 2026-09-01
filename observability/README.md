@@ -137,7 +137,7 @@ discovered while looking back at an incident that just happened.
 
 The consequence: those PVCs bind to **zonal** Persistent Disks, which pin each pod to one zone for
 the life of the claim. If the cluster autoscaler drained a zone to zero, they would go `Pending` and
-could not recover. That is why `min_nodes_per_zone = 1` in Terraform — the two settings are causally
+could not recover. That is why `min_nodes_total = 3` in Terraform (a total, not per-zone — the per-zone form produced a single node) — the two settings are causally
 linked, and the link is written down in both places.
 
 Retention is 15d for metrics, 7d for logs and traces. Loki's `compactor.retention_enabled: true` is

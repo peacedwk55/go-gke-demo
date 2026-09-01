@@ -13,7 +13,7 @@ resources:
 # dev at AR would force every developer to hold GCP credentials.
 images:
   - name: go-sample-app
-    newName: docker.io/DOCKERHUB_USER/go-sample-app
+    newName: docker.io/dockerpeace/go-sample-app
     newTag: v1.0.0
 
 configMapGenerator:

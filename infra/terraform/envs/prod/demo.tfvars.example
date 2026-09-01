@@ -50,11 +50,15 @@ master_authorized_networks = [
 machine_type = "e2-standard-2" # 6 vCPU total across 3 zones
 disk_size_gb = 30              # 90 GB of boot disk instead of 150
 
-# Floor and ceiling both left at the defaults on purpose. min_nodes_per_zone
-# must stay >= 1 or the LGTM stack's zonal PVCs lose the node in their zone and
-# go Pending with no way to recover.
-min_nodes_per_zone = 1
-max_nodes_per_zone = 3
+# TOTAL across the region, not per zone — and 3 is a floor, not a preference.
+#
+# The first apply of this stack used the per-zone form (min_node_count = 1 with
+# three zones) and produced ONE node, stably. That silently invalidated three of
+# the assignment's claims at once: nothing to spread across zones, nothing to
+# separate pods onto, and not enough capacity for the LGTM stack. A variable
+# validation now rejects anything below 3.
+min_nodes_total = 3
+max_nodes_total = 9
 
 # ── Cost ────────────────────────────────────────────────────────────────────
 

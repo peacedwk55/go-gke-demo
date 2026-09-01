@@ -44,7 +44,7 @@ spec:
         releaseName: kube-prometheus-stack
         valueFiles:
           - $values/observability/kube-prometheus-stack.values.yaml
-    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    - repoURL: https://github.com/peacedwk55/go-gke-demo.git
       targetRevision: main
       ref: values
 
@@ -112,7 +112,7 @@ spec:
         releaseName: loki
         valueFiles:
           - $values/observability/loki.values.yaml
-    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    - repoURL: https://github.com/peacedwk55/go-gke-demo.git
       targetRevision: main
       ref: values
   destination:
@@ -157,7 +157,7 @@ spec:
         releaseName: tempo
         valueFiles:
           - $values/observability/tempo.values.yaml
-    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    - repoURL: https://github.com/peacedwk55/go-gke-demo.git
       targetRevision: main
       ref: values
   destination:
@@ -205,7 +205,7 @@ spec:
         releaseName: alloy
         valueFiles:
           - $values/observability/alloy.values.yaml
-    - repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    - repoURL: https://github.com/peacedwk55/go-gke-demo.git
       targetRevision: main
       ref: values
   destination:
@@ -247,7 +247,7 @@ metadata:
 spec:
   project: observability
   source:
-    repoURL: https://github.com/GH_OWNER/GH_REPO.git
+    repoURL: https://github.com/peacedwk55/go-gke-demo.git
     targetRevision: main
     path: observability
   destination:

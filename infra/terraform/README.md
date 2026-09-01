@@ -6,7 +6,7 @@ Terraform for a regional, private, VPC-native GKE cluster with Workload Identity
 envs/prod/          root module — the only place you run terraform
 modules/network/    VPC, subnet + secondary ranges, Cloud Router + NAT, firewall
 modules/gke/        cluster + separately-managed node pool
-modules/iam/        node SA, app GSA, the Workload Identity binding
+modules/iam/        node SA, app GSA (the WI binding itself lives in envs/prod — see below)
 ```
 
 Modules take inputs and return outputs; the root module wires them together. Apply order is
@@ -69,8 +69,23 @@ configured and silently does nothing:
 3. **`google_service_account_iam_member`, not `_binding`.** The `_binding` form is authoritative and
    silently deletes any other binding on that GSA which Terraform does not know about.
 
-The binding is created before the namespace or KSA exists. That is intentional: the member string is
-just an identity name, so Terraform and the cluster bootstrap have no ordering dependency.
+The binding is created before the namespace or KSA exists, and that part is genuinely fine — the
+member string names an identity, it does not resolve one.
+
+**But there IS an ordering dependency, and an earlier version of this file denied it.** The first
+apply failed here:
+
+```
+Error 400: Identity Pool does not exist (<project>.svc.id.goog)
+```
+
+The *pool* in that member string is not a pre-existing project resource: GKE creates it as a side
+effect of `workload_identity_config` on the cluster. So the binding has to come after the cluster —
+which the `iam` module cannot express, because the `gke` module already consumes its node service
+account and `depends_on = [module.gke]` there would close a cycle.
+
+The binding therefore lives in the **root module** (`envs/prod/main.tf`), which can see both and
+order them. Fourth thing that is easy to get wrong, found by applying rather than by reading.
 
 ---
 
@@ -286,7 +301,7 @@ Sized for the **LGTM stack**, not the app. The app requests 200m/256Mi; Promethe
 Grafana + Alloy together want roughly 4–6 vCPU and 8–12 GB. On `e2-medium` the observability stack
 simply never schedules, which presents as mysterious `Pending` pods rather than a clear error.
 
-`min_nodes_per_zone = 1` is also load-bearing for Task 6: the LGTM PVCs bind to **zonal**
+`min_nodes_total = 3` is also load-bearing for Task 6: the LGTM PVCs bind to **zonal**
 Persistent Disks, which pins each pod to one zone for the life of the volume. If the autoscaler
 drained a zone to zero those pods would go `Pending` and could not recover.
 

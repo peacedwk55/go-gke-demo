@@ -195,10 +195,30 @@ resource "google_container_node_pool" "primary" {
   # each of three zones: a floor of 3 and a ceiling of 9.
   node_count = null
 
+  # TOTAL node counts, not per-zone — and that choice was forced by observation.
+  #
+  # `min_node_count` / `max_node_count` are documented as per-zone for a regional
+  # cluster, so min=1 across three zones should have produced a floor of three
+  # nodes. The first apply produced exactly ONE node, in asia-southeast1-c, and
+  # it stayed there: not a slow scale-up, a stable state at 1.
+  #
+  # That matters well beyond node arithmetic. One node in one zone means the
+  # topologySpreadConstraints on topology.kubernetes.io/zone in
+  # k8s/base/deployment.yaml have nothing to spread across, the pod
+  # anti-affinity has nothing to separate onto, and the LGTM stack of Task 6
+  # does not fit in a single e2-standard-2. Three of the assignment's claims
+  # quietly stop being true.
+  #
+  # `total_*` states the intent directly instead of relying on an
+  # interpretation that did not hold, so the floor is 3 nodes because the
+  # configuration says 3 — not because three zones each contribute one.
+  #
+  # location_policy = BALANCED is what then distributes those 3 across the
+  # zones rather than stacking them in one.
   autoscaling {
-    min_node_count  = var.min_nodes_per_zone
-    max_node_count  = var.max_nodes_per_zone
-    location_policy = "BALANCED"
+    total_min_node_count = var.min_nodes_total
+    total_max_node_count = var.max_nodes_total
+    location_policy      = "BALANCED"
   }
 
   management {

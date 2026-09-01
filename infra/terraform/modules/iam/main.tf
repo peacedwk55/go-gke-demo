@@ -33,9 +33,9 @@ terraform {
 #
 # No key material is created, stored or transported at any point.
 #
-# Note the binding is created before the namespace or KSA exists. That is fine
-# and intentional: the member string is just an identity name, so Terraform and
-# the cluster bootstrap have no ordering dependency on each other.
+# Step 2 does NOT live in this module — see the note at the bottom of the file.
+# It has to run after the cluster exists, and the cluster already depends on
+# this module, so it sits in the root module instead.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Node service account ─────────────────────────────────────────────────────
@@ -100,20 +100,24 @@ resource "google_project_iam_member" "app" {
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# ── The Workload Identity binding ────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# The Workload Identity binding is NOT here — it lives in the root module.
 #
-# This single resource is the whole answer to "deploy without injecting keys".
+# It cannot live in this module, and the reason is a real ordering constraint
+# that only surfaced on the first apply:
 #
-# The member string is the identity of one KSA in one namespace in one cluster's
-# workload pool. It is scoped as tightly as it can be: another namespace, or a
-# differently-named KSA, cannot impersonate this GSA even if an attacker can
-# create pods.
+#   Error 400: Identity Pool does not exist (<project>.svc.id.goog)
 #
-# google_service_account_iam_member (not _binding) is used on purpose: _binding
-# is authoritative and would silently delete any other binding on this GSA that
-# Terraform does not know about.
-resource "google_service_account_iam_member" "workload_identity" {
-  service_account_id = google_service_account.app.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.ksa_namespace}/${var.ksa_name}]"
-}
+# The pool named in the member string is created BY THE CLUSTER, as a side
+# effect of workload_identity_config. So the binding has to come after the
+# cluster. But the cluster already depends on this module for the node service
+# account, so `depends_on = [module.gke]` here would be a cycle.
+#
+# The binding therefore sits in envs/prod/main.tf, which can see both modules
+# and can order them explicitly. See google_service_account_iam_member
+# "workload_identity" there.
+#
+# Worth recording that the earlier reasoning was wrong, not just incomplete:
+# "the member string is just an identity name, so there is no ordering
+# dependency" is true of the namespace and the KSA, which genuinely need not
+# exist yet — and false of the pool, which must.

@@ -103,16 +103,16 @@ variable "disk_size_gb" {
   default = 50
 }
 
-variable "min_nodes_per_zone" {
-  description = "Per zone, not total. 1 x 3 zones = floor of 3 nodes."
-  type        = number
-  default     = 1
-}
-
-variable "max_nodes_per_zone" {
-  description = "Per zone, not total. 3 x 3 zones = ceiling of 9 nodes."
+variable "min_nodes_total" {
+  description = "TOTAL across the region, not per zone. Must be >= 3 — one node per zone. See modules/gke/variables.tf."
   type        = number
   default     = 3
+}
+
+variable "max_nodes_total" {
+  description = "TOTAL across the region, not per zone."
+  type        = number
+  default     = 9
 }
 
 # ── Lifecycle ───────────────────────────────────────────────────────────────
