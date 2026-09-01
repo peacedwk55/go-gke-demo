@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>97 ไฟล์</title>
+<title>รีโปนี้ทีละไฟล์</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -502,7 +502,6 @@ table.status td:first-child {
   white-space: nowrap;
 }
 .pill.run  { background: var(--verd-wash); color: var(--verdigris); border: 1px solid color-mix(in srgb, var(--verdigris) 30%, transparent); }
-.pill.part { background: var(--copper-wash); color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 30%, transparent); }
 .pill.no   { background: var(--surface-2); color: var(--muted); border: 1px solid var(--rule); }
 
 /* ── แผนต่อไป ──────────────────────────────────────────────────────────── */
@@ -561,17 +560,17 @@ footer {
 
 <header class="masthead">
   <div class="eyebrow">Repository walkthrough</div>
-  <h1>97 ไฟล์</h1>
+  <h1>รีโปนี้ทีละไฟล์</h1>
   <p class="standfirst">
     ทุกโฟลเดอร์ ทุกไฟล์ในรีโป Go-on-GKE เรียงจากบนลงล่าง — แต่ละไฟล์คืออะไร
     และมีไว้ทำไม ลำดับตามโครงสร้างไฟล์จริง เลข Task ตามลำดับการสร้างใน
     <code>CLAUDE.md</code>
   </p>
   <div class="stats">
-    <div class="stat"><b>97</b><span>ไฟล์</span></div>
+    <div class="stat"><b>102</b><span>ไฟล์</span></div>
     <div class="stat"><b>9</b><span>Task (0–8)</span></div>
     <div class="stat"><b>8</b><span>README</span></div>
-    <div class="stat"><b>4</b><span>commit</span></div>
+    <div class="stat"><b>3</b><span>เสาหลัก (HA · Scale · Security)</span></div>
   </div>
 </header>
 
@@ -1393,67 +1392,59 @@ footer {
         <tbody>
           <tr><td>0 · app</td><td><span class="pill run">รันแล้ว</span></td><td>เทสต์ 9/9 ผ่าน <code>-race</code>, vet และ gofmt สะอาด</td></tr>
           <tr><td>1 · image</td><td><span class="pill run">รันแล้ว</span></td><td>build จริง 29 MB, Trivy 0, ทดสอบ drain ด้วย <code>docker kill</code></td></tr>
-          <tr><td>2 · push</td><td><span class="pill part">ยังไม่ push</span></td><td>คำสั่งพร้อมและทดสอบในเครื่องแล้ว แต่ยังไม่มีบัญชี Docker Hub จึงยังไม่มี URL และ digest จริง</td></tr>
+          <tr><td>2 · push</td><td><span class="pill run">รันแล้ว</span></td><td>push ขึ้น <code>docker.io/dockerpeace/go-sample-app</code> (public) สองแท็ก <code>v1.0.0</code> และ <code>sha-65e379e</code> ขนาด 6.5 MB บน registry — digest <code>sha256:8357fe65…</code> บันทึกใน <code>docker/README.md</code> ตรงกับที่ registry ตอบ และไม่มีแท็ก <code>latest</code> อยู่เลย</td></tr>
           <tr><td>3 · Kustomize</td><td><span class="pill run">รันแล้ว</span></td><td>deploy ลง kind, วัด zero-downtime ได้ 0/8,017</td></tr>
-          <tr><td>4 · Terraform</td><td><span class="pill part">validate แล้ว</span></td><td><code>fmt</code>, <code>validate</code> และ variable validation ผ่าน แต่ยังไม่เคย <code>apply</code> เพราะยังไม่มี GCP project</td></tr>
+          <tr><td>4 · Terraform</td><td><span class="pill run">รันแล้ว</span></td><td><code>apply</code> จริงบน GCP ได้ regional private cluster + Cloud NAT + AR remote repo + Workload Identity แล้วรื้อด้วย teardown สองขั้น <b>พบตอน apply:</b> WI binding รันก่อนคลัสเตอร์ที่สร้าง identity pool (<code>Error 400: Identity Pool does not exist</code>) และ node pool ได้ 1 node ไม่ใช่ 3 เพราะใช้ <code>min_node_count</code> แทน <code>total_min_node_count</code> — ทั้งสองข้อ <code>validate</code> ผ่านสบาย</td></tr>
           <tr><td>5 · ArgoCD</td><td><span class="pill no">ยังไม่รัน</span></td><td>manifest ผ่าน kubeconform แต่ยังไม่เคยเห็น Application sync จริง</td></tr>
           <tr><td>6 · LGTM</td><td><span class="pill no">ยังไม่รัน</span></td><td>values และ dashboard พร้อม แต่ยังไม่เคยเห็น correlation ทำงาน — ซึ่งเป็นจุดขายของงานนี้</td></tr>
-          <tr><td>7 · CI/CD</td><td><span class="pill part">lint แล้ว</span></td><td>actionlint สะอาด แต่ยังไม่มี GitHub repo จึงยังไม่เคยมี workflow run จริง</td></tr>
-          <tr><td>8 · Ansible</td><td><span class="pill no">ยังไม่รัน</span></td><td>ansible-lint ผ่านโปรไฟล์ production แต่ยังไม่เคยพิสูจน์ <code>changed=0</code> บนเครื่องจริง</td></tr>
+          <tr><td>7 · CI/CD</td><td><span class="pill run">รันแล้ว</span></td><td>run เขียวครบสาย <code>test → invariants → build → scan → push → bump</code> ได้ image <code>sha-65e379e</code> บน Docker Hub และ commit <code>ed9f0c1 [skip ci]</code> กลับเข้า Git ที่เขียน manifest เป็น path ของ Artifact Registry ด้วยแท็กเดียวกัน ไม่เกิด loop (ไม่มี commit ตามหลัง) และไม่มี <code>kubectl</code> ใน CI แม้บรรทัดเดียว <b>พบระหว่างทาง 4 บั๊ก</b> ที่ actionlint จับไม่ได้ทั้งหมด</td></tr>
+          <tr><td>8 · Ansible</td><td><span class="pill run">รันแล้ว</span></td><td>รันสองรอบบน container ที่มี systemd จริง รอบสองได้ <code>changed=0</code> ตามเกณฑ์ <b>พบ 6 บั๊ก</b> ที่ ansible-lint โปรไฟล์ production ผ่านหมด รวมถึง <code>validate</code> ที่ขาด <code>%s</code> (ทำให้ <code>daemon.json</code> ไม่ถูกเขียนเลย) และ <code>checksum:</code> บน <code>unarchive</code> ซึ่งไม่มีพารามิเตอร์นี้ — แปลว่า checksum ที่เขียนไว้ไม่เคยถูกตรวจ</td></tr>
         </tbody>
       </table>
     </div>
 
     <p class="f-why" style="margin-top:22px">
-      แผนต่อไปจึงเรียงตาม <strong>ช่องว่างที่ใหญ่ที่สุดก่อน</strong> ไม่ใช่ตามลำดับ Task
-      และตั้งใจดันงานที่ไม่มีค่าใช้จ่ายขึ้นมาก่อน เพื่อให้ตอนขึ้น GCP จริงเหลือแค่ครั้งเดียว
+      เหลือช่องว่างเดียว และมันคือช่องที่ใหญ่ที่สุด — <strong>Task 5 กับ 6 ต้องมีคลัสเตอร์ที่รันอยู่จริง</strong>
+      ถึงจะพิสูจน์ได้ ทั้งสองข้อจึงเดินคู่กันเป็นงานเดียว ไม่แยกกันทำ
     </p>
 
     <div class="plan">
       <div class="plan-item">
         <b>1</b>
         <div class="what">
-          <strong>สร้าง kind cluster ใหม่ แล้ว bootstrap ArgoCD + LGTM</strong>
-          <span>ปิดช่องว่างใหญ่ที่สุดในตารางข้างบนทีเดียวสองข้อ พิสูจน์ Task 5 (Application sync, selfHeal ไม่ชน HPA, rollback ด้วย <code>git revert</code>) และ Task 6 (metric→trace→log correlation ซึ่งเป็นจุดขายและยังไม่เคยเห็นทำงาน) พร้อม commit <code>kind/kind-config.yaml</code> เข้ารีโปเพื่อให้ทำซ้ำได้</span>
+          <strong>bootstrap ArgoCD + LGTM บน kind ก่อน</strong>
+          <span>ทำบน kind ก่อนเพราะสองงานนี้ต้องแก้วนหลายรอบ — ArgoCD <code>Application</code> ที่ path ผิดหรือ Helm values ที่ resource request สูงเกินจะรู้ตอน sync เท่านั้น ไม่ใช่ตอน lint และการวนแก้บน kind ไม่เสียเงินเลย เป้าหมายคือเห็น <code>Synced/Healthy</code> จริง, เห็น <code>selfHeal</code> ไม่กดทับ HPA ตอน scale, และ rollback ด้วย <code>git revert</code> แล้ว pod กลับไป tag เดิมเอง</span>
         </div>
         <span class="cost free">ไม่มีค่าใช้จ่าย</span>
       </div>
       <div class="plan-item">
         <b>2</b>
         <div class="what">
-          <strong>ทดสอบ Ansible บน Multipass VM</strong>
-          <span>รัน playbook สองครั้ง แล้วยืนยันว่าครั้งที่สองได้ <code>changed=0</code> จริง ซึ่งเป็นเกณฑ์ตัดสินของ Task 8 และเป็นสิ่งเดียวที่ linter พิสูจน์แทนไม่ได้</span>
+          <strong>พิสูจน์ correlation ให้เห็นด้วยตา</strong>
+          <span>นี่คือจุดขายของ Task 6 และเป็นข้อเดียวที่ไฟล์ values พิสูจน์แทนไม่ได้: ยิง request เข้าแอป → เปิดกราฟ RED ใน Grafana → คลิก exemplar บน histogram → เด้งเข้า trace ใน Tempo → กด "logs for this span" → ได้ log บรรทัดที่มี <code>trace_id</code> เดียวกันจาก Loki ถ้าลูกโซ่นี้ขาดตรงไหน แปลว่า <code>trace_id</code> ไม่ได้ไหลครบทั้งสามระบบ</span>
         </div>
         <span class="cost free">ไม่มีค่าใช้จ่าย</span>
       </div>
       <div class="plan-item">
         <b>3</b>
         <div class="what">
-          <strong>สร้าง GitHub repo และ Docker Hub แล้วปล่อย pipeline วิ่ง</strong>
-          <span>ต้องการจากคุณ: บัญชี Docker Hub (repo ต้องเป็น public เพราะ AR remote ดึงแบบ anonymous) และ GitHub repo พร้อมตั้ง secret/variable ที่ workflow อ้างถึง จากนั้นจะได้ทั้ง Task 2 (URL + digest จริง) และ Task 7 (workflow run จริง) ในคราวเดียว</span>
-        </div>
-        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
-      </div>
-      <div class="plan-item">
-        <b>4</b>
-        <div class="what">
-          <strong>ขึ้น GKE จริงครั้งเดียว เก็บหลักฐาน แล้วรื้อ</strong>
-          <span>ทำเป็นลำดับสุดท้ายโดยตั้งใจ เพราะเมื่อถึงตอนนั้นทุกอย่างถูกพิสูจน์บน kind แล้ว เหลือแค่พิสูจน์ตัว Terraform กับ Workload Identity คลัสเตอร์กินราว 8–13 ดอลลาร์ต่อวัน จึงควรจบใน session เดียว: <code>apply</code> → capture → teardown สองขั้น</span>
+          <strong>รวบขึ้น GKE จริงครั้งเดียว เก็บหลักฐาน แล้วรื้อ</strong>
+          <span>ทำเป็นขั้นสุดท้ายโดยเจตนา เพราะตอนนั้นเหลือพิสูจน์แค่สิ่งที่ kind เลียนแบบไม่ได้: pod ดึง image ผ่าน Artifact Registry remote repo ได้จริง, Workload Identity ให้ token โดยไม่มีไฟล์ key อยู่ที่ไหนเลย, และ topology spread กระจาย pod ข้าม 3 zone จริง ใช้ <code>./scripts/bootstrap-cluster.sh</code> แล้วปิดด้วย teardown สองขั้น จบใน session เดียวราวหนึ่งชั่วโมง</span>
         </div>
         <span class="cost paid">มีค่าใช้จ่าย</span>
       </div>
     </div>
 
     <div class="note">
-      <p><b>สิ่งที่ต้องได้จากคุณก่อนเริ่มข้อ 3</b> placeholder สี่ตัวที่ตั้งใจไม่ commit ไว้ในรีโป: <code>PROJECT_ID</code>, <code>DOCKERHUB_USER</code>, <code>GH_OWNER/GH_REPO</code> และชื่อ bucket ของ tfstate ข้อ 1 กับ 2 เริ่มได้เลยโดยไม่ต้องใช้อะไรเพิ่ม</p>
+      <p><b>ทำไมเหลือแค่นี้</b> placeholder สี่ตัวที่เคยเป็นตัวบล็อกถูกเติมครบแล้ว — GCP project, Docker Hub user, GitHub repo และ bucket ของ tfstate ทั้งหมดมีค่าจริง และ pipeline วิ่งผ่านมันมาแล้ว ข้อ 1 กับ 2 เริ่มได้ทันทีโดยไม่ต้องรออะไรและไม่มีค่าใช้จ่าย ส่วนข้อ 3 คือครั้งเดียวที่ต้องเปิดคลัสเตอร์เสียเงิน</p>
     </div>
   </section>
 
   <footer>
-    <span>97 ไฟล์</span>
-    <span>4 commit</span>
-    <span>Task 0–8 เขียนครบ · 3 ยังไม่ได้รัน</span>
-    <span>ข้อมูล ณ 27 ส.ค. 2026</span>
+    <span>102 ไฟล์</span>
+    <span>18 commit</span>
+    <span>Task 0–8 เขียนครบ · 7 รันแล้ว · 2 ยังไม่ได้รัน</span>
+    <span>ข้อมูล ณ 1 ก.ย. 2026</span>
   </footer>
 
   </main>

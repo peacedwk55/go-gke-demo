@@ -116,11 +116,21 @@ cp terraform.tfvars.example terraform.tfvars   # project_id + your IP/32
 terraform init -backend-config="bucket=<project>-tfstate"
 terraform apply
 
+# 2-3. hand the cluster over to ArgoCD — the ONE imperative step in the system
+#
+# Steps 2 and 3 below are what this script automates. Prefer the script: it also
+# refuses to run when the working tree is dirty or HEAD is unpushed, because
+# ArgoCD syncs what is in the REMOTE, and bootstrapping a cluster against a
+# commit that only exists on your laptop produces a "Synced" badge for code
+# nobody else has.
+./scripts/bootstrap-cluster.sh <dockerhub-user> <github-owner/repo>
+
+# --- or, the same thing by hand ---------------------------------------------
 # 2. substitute the two facts the workload layer needs from the infra layer
 terraform output ksa_annotation      # -> k8s/overlays/prod/patches/serviceaccount-wi.yaml
 terraform output image_repository    # -> k8s/overlays/prod/kustomization.yaml
 
-# 3. ArgoCD — the only imperative step in the whole system
+# 3. install ArgoCD and point it at Git
 eval "$(terraform output -raw get_credentials_command)"
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/install.yaml
@@ -136,6 +146,11 @@ kubectl apply -f argocd/apps/
 # 4. from here, Git drives everything. Teardown is two steps:
 #    terraform apply -var deletion_protection=false && terraform destroy
 ```
+
+The published image for this repository, for reference:
+**[`dockerpeace/go-sample-app`](https://hub.docker.com/r/dockerpeace/go-sample-app)** —
+`v1.0.0` @ `sha256:8357fe65123debb9f2f85017d56d75f7ce62bc19ad448f08dd56d51cc94f719c`.
+No `latest` tag exists, by design; see [docker/README.md](docker/README.md).
 
 Ansible ([Task 8](ansible/)) is independent of all of this and needs no cluster.
 

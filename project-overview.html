@@ -237,7 +237,6 @@ figcaption b { color: var(--ink); font-weight: 600; }
   gap: 3px;
 }
 .task.run  { border-color: color-mix(in srgb, var(--verdigris) 42%, transparent); background: var(--verd-wash); }
-.task.part { border-color: color-mix(in srgb, var(--copper) 38%, transparent); background: var(--copper-wash); }
 .task .id {
   font-family: var(--mono);
   font-size: 11px;
@@ -247,7 +246,6 @@ figcaption b { color: var(--ink); font-weight: 600; }
 .task .nm { font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.5; }
 .task .st { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .task.run  .st { color: var(--verdigris); }
-.task.part .st { color: var(--copper); }
 
 /* ── ขั้นตอน ──────────────────────────────────────────────────────────── */
 .steps {
@@ -697,24 +695,24 @@ footer {
   <div class="tasks">
     <div class="task run">  <span class="id">TASK 0</span><span class="nm">แอป Go</span>       <span class="st">รันแล้ว · 9 เทสต์ผ่าน</span></div>
     <div class="task run">  <span class="id">TASK 1</span><span class="nm">Docker image</span>  <span class="st">รันแล้ว · 29 MB, Trivy 0</span></div>
-    <div class="task part"> <span class="id">TASK 2</span><span class="nm">push ขึ้น registry</span><span class="st">ยังไม่มีบัญชี Docker Hub</span></div>
+    <div class="task run">  <span class="id">TASK 2</span><span class="nm">push ขึ้น registry</span><span class="st">รันแล้ว · 2 แท็ก, ไม่มี latest</span></div>
     <div class="task run">  <span class="id">TASK 3</span><span class="nm">Kustomize</span>     <span class="st">รันแล้ว · 0 หลุดจาก 8,017</span></div>
-    <div class="task part"> <span class="id">TASK 4</span><span class="nm">Terraform GKE</span> <span class="st">plan พร้อม · รอ apply</span></div>
+    <div class="task run">  <span class="id">TASK 4</span><span class="nm">Terraform GKE</span> <span class="st">apply จริงแล้ว · รื้อแล้ว</span></div>
     <div class="task">      <span class="id">TASK 5</span><span class="nm">ArgoCD</span>        <span class="st">ยังไม่เคยรัน</span></div>
     <div class="task">      <span class="id">TASK 6</span><span class="nm">LGTM</span>          <span class="st">ยังไม่เคยรัน</span></div>
-    <div class="task part"> <span class="id">TASK 7</span><span class="nm">CI/CD</span>         <span class="st">lint ผ่าน · ยังไม่มี repo</span></div>
-    <div class="task">      <span class="id">TASK 8</span><span class="nm">Ansible</span>       <span class="st">ยังไม่เคยรัน</span></div>
+    <div class="task run">  <span class="id">TASK 7</span><span class="nm">CI/CD</span>         <span class="st">รันแล้ว · pipeline เขียวครบสาย</span></div>
+    <div class="task run">  <span class="id">TASK 8</span><span class="nm">Ansible</span>       <span class="st">รันแล้ว · รอบสอง changed=0</span></div>
   </div>
 
   <div class="facts">
-    <div class="fact"><b class="ok">4</b><span>รันจริงแล้ว</span></div>
-    <div class="fact"><b>3</b><span>พร้อม แต่ยังไม่รัน</span></div>
-    <div class="fact"><b>3</b><span>ยังไม่เคยรันเลย</span></div>
+    <div class="fact"><b class="ok">7</b><span>รันจริงแล้ว</span></div>
+    <div class="fact"><b>2</b><span>เหลือ — ต้องมีคลัสเตอร์</span></div>
+    <div class="fact"><b>10</b><span>บั๊กที่ linter ผ่านหมด</span></div>
   </div>
 </section>
 
 <footer>
-  <span>98 ไฟล์ · 5 commit</span>
+  <span>102 ไฟล์</span>
   <span>Task 0–8 เขียนครบ</span>
   <span>ข้อมูล ณ 1 ก.ย. 2026</span>
 </footer>
