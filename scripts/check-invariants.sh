@@ -148,6 +148,44 @@ for f in *.html; do
 done
 check "root HTML declares charset in the first 1024 bytes" "$noenc"
 
+# ── 9. Every `uses:` ref actually exists ────────────────────────────────────
+# Requires network; skipped without it so a laptop with no connection still gets
+# the other eight checks.
+#
+# This exists because of a real failure that nothing else caught:
+#
+#   Error: Unable to resolve action `aquasecurity/trivy-action@0.28.0`,
+#          unable to find version `0.28.0`
+#
+# The tag is v0.28.0. The `v` was missing. GitHub reports this as a failure in
+# "Set up job" — before any step runs — so the log gives no hint about which
+# action is at fault, and the whole job's real work never executes.
+#
+# actionlint cannot catch it: verifying that a tag exists needs a network call,
+# and actionlint deliberately makes none. So a linter pass is not evidence that
+# the workflow can start.
+if [ "${SKIP_NETWORK_CHECKS:-}" = "1" ]; then
+    printf '  %sSKIP%s  action refs resolve (SKIP_NETWORK_CHECKS=1)\n' "$RED" "$RESET"
+elif ! curl -sf -m 5 -o /dev/null https://api.github.com/rate_limit 2>/dev/null; then
+    printf '  %sSKIP%s  action refs resolve (no network)\n' "$RED" "$RESET"
+else
+    badrefs=""
+    # `while read` rather than `for` over a command substitution: an action ref
+    # never contains whitespace today, but word-splitting a URL list is the kind
+    # of shortcut that breaks quietly later (shellcheck SC2013).
+    while IFS= read -r u; do
+        [ -n "$u" ] || continue
+        repo="${u%@*}"
+        ref="${u#*@}"
+        # A ref may be a tag or a branch, so try both endpoints before failing.
+        if ! curl -sf -m 10 -o /dev/null "https://api.github.com/repos/$repo/git/ref/tags/$ref" 2>/dev/null \
+           && ! curl -sf -m 10 -o /dev/null "https://api.github.com/repos/$repo/commits/$ref" 2>/dev/null; then
+            badrefs="${badrefs}${badrefs:+$'\n'}$u"
+        fi
+    done < <(grep -hoE 'uses: [^ ]+' .github/workflows/*.y*ml 2>/dev/null | cut -d' ' -f2 | sort -u)
+    check "every workflow action ref resolves" "$badrefs"
+fi
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "One or more invariants failed."

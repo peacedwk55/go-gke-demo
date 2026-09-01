@@ -127,7 +127,7 @@ jobs:
           done
 
       - name: Trivy IaC scan — on RENDERED manifests
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: config
           # `rendered/`, NOT the source tree, and this matters.
@@ -197,7 +197,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan — gate on CRITICAL
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
           format: table
@@ -210,12 +210,11 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore
           scanners: vuln
-          trivy-config: ""
         env:
           TRIVY_DB_REPOSITORY: mirror.gcr.io/aquasec/trivy-db:2
 
       - name: Report HIGH (informational, does not fail)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
           format: table
