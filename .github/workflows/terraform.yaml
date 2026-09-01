@@ -62,9 +62,25 @@ jobs:
   plan:
     name: plan
     needs: fmt-validate
-    # Skipped for fork PRs: they cannot be trusted with cloud credentials, and
-    # a plan requires read access to the real project.
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    # Three conditions, and the first one is the fix for a real failure.
+    #
+    # A plan needs cloud credentials. Without the WIF secrets configured this
+    # job used to run anyway and fail at the auth step — which made the whole
+    # workflow red on a repository that had simply not opted into Terraform CI
+    # yet, and buried any genuine fmt/validate failure behind noise.
+    #
+    # Skipping when the credentials are absent is the honest behaviour: fmt and
+    # validate still gate every push, and plan appears the moment the secrets
+    # exist. `secrets` is readable in a job-level `if`, so this needs no
+    # separate guard job.
+    #
+    # The second and third conditions exclude fork PRs, which cannot be trusted
+    # with cloud credentials.
+    if: >-
+      secrets.GCP_WIF_PROVIDER != '' &&
+      secrets.GCP_TERRAFORM_SA != '' &&
+      (github.event_name == 'push' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
