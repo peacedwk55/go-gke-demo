@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>GKE ใน 6 ภาพ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────────
+   จานสีและตัวอักษรเดียวกับ repo-guide.html โดยเจตนา — สองหน้านี้เป็นชุดเดียวกัน
+   ทองแดง = สิ่งที่กลไกขึ้นอยู่กับมัน · สนิมเขียว = พิสูจน์แล้ว
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --ground:      #F1F4F5;
+  --surface:     #FFFFFF;
+  --surface-2:   #F7F9FA;
+  --ink:         #171C20;
+  --ink-soft:    #3A464E;
+  --muted:       #66757D;
+  --faint:       #93A2AA;
+  --rule:        #DBE2E6;
+  --rule-soft:   #E9EEF0;
+  --copper:      #A85B27;
+  --copper-wash: #FBF0E7;
+  --verdigris:   #1F6E60;
+  --verd-wash:   #E7F2EF;
+  --shadow:      0 1px 2px rgba(23,28,32,.05), 0 10px 28px -14px rgba(23,28,32,.16);
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans Thai", "IBM Plex Sans", ui-sans-serif, system-ui, "Leelawadee UI", sans-serif;
+  --disp: "Anuphan", "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #12171A;
+    --surface:     #191F23;
+    --surface-2:   #1E252A;
+    --ink:         #E6ECEF;
+    --ink-soft:    #C4CFD5;
+    --muted:       #8B9BA3;
+    --faint:       #6B7C85;
+    --rule:        #2B343A;
+    --rule-soft:   #232B31;
+    --copper:      #E09A63;
+    --copper-wash: #2A211A;
+    --verdigris:   #5FBCA8;
+    --verd-wash:   #172724;
+    --shadow:      0 1px 2px rgba(0,0,0,.3), 0 12px 32px -16px rgba(0,0,0,.65);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #12171A;
+  --surface:     #191F23;
+  --surface-2:   #1E252A;
+  --ink:         #E6ECEF;
+  --ink-soft:    #C4CFD5;
+  --muted:       #8B9BA3;
+  --faint:       #6B7C85;
+  --rule:        #2B343A;
+  --rule-soft:   #232B31;
+  --copper:      #E09A63;
+  --copper-wash: #2A211A;
+  --verdigris:   #5FBCA8;
+  --verd-wash:   #172724;
+  --shadow:      0 1px 2px rgba(0,0,0,.3), 0 12px 32px -16px rgba(0,0,0,.65);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 40px) 90px;
+}
+
+/* ── หัวเรื่อง ─────────────────────────────────────────────────────────── */
+header {
+  padding: clamp(44px, 7vw, 80px) 0 32px;
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  gap: 18px;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--copper);
+}
+h1 {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: clamp(36px, 6.6vw, 66px);
+  line-height: 1.16;
+  letter-spacing: -.012em;
+  margin: 0;
+  text-wrap: balance;
+}
+.lede {
+  font-size: clamp(17px, 2vw, 19.5px);
+  line-height: 1.7;
+  color: var(--ink-soft);
+  max-width: 48ch;
+  margin: 0;
+}
+
+/* ── แต่ละภาพ ─────────────────────────────────────────────────────────── */
+section {
+  padding-top: clamp(48px, 6vw, 76px);
+}
+.num {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--copper);
+  margin-bottom: 8px;
+}
+h2 {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: clamp(24px, 3.4vw, 34px);
+  line-height: 1.32;
+  letter-spacing: -.008em;
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+.say {
+  margin: 0 0 26px;
+  color: var(--ink-soft);
+  max-width: 56ch;
+  font-size: 16.5px;
+}
+.say b { color: var(--ink); font-weight: 600; }
+
+/* ── กรอบรูป ──────────────────────────────────────────────────────────── */
+figure {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.canvas {
+  overflow-x: auto;
+  padding: 26px 24px 8px;
+}
+figure svg {
+  display: block;
+  width: 100%;
+  min-width: 620px;
+  height: auto;
+  color: var(--ink-soft);
+}
+figcaption {
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--surface-2);
+  font-size: 14.5px;
+  line-height: 1.72;
+  color: var(--muted);
+}
+figcaption b { color: var(--ink); font-weight: 600; }
+
+/* ── สีในรูป ──────────────────────────────────────────────────────────── */
+.s-box   { fill: var(--surface); stroke: var(--rule); stroke-width: 1.5; }
+.s-box-2 { fill: var(--surface-2); stroke: var(--rule); stroke-width: 1.5; }
+.s-hot   { fill: var(--copper-wash); stroke: var(--copper); stroke-width: 1.75; }
+.s-ok    { fill: var(--verd-wash); stroke: var(--verdigris); stroke-width: 1.75; }
+.s-line  { stroke: currentColor; stroke-width: 1.5; fill: none; }
+.s-hotline { stroke: var(--copper); stroke-width: 2; fill: none; }
+.s-okline  { stroke: var(--verdigris); stroke-width: 2.5; fill: none; }
+.s-dash  { stroke: currentColor; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; opacity: .45; }
+.s-t     { font-family: "IBM Plex Sans Thai", sans-serif; font-size: 13px; fill: var(--ink); }
+.s-tm    { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; fill: var(--ink); }
+.s-lab   { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; fill: var(--muted); letter-spacing: .04em; }
+.s-hotlab { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; fill: var(--copper); letter-spacing: .04em; font-weight: 500; }
+.s-grid  { stroke: var(--rule); stroke-width: 1; }
+
+/* ── ตัวเลข / สถานะ ───────────────────────────────────────────────────── */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-top: 22px;
+}
+.fact {
+  padding: 16px 20px;
+  border-right: 1px solid var(--rule-soft);
+  display: grid;
+  gap: 2px;
+}
+.fact:last-child { border-right: 0; }
+.fact b {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--copper);
+  line-height: 1.3;
+}
+.fact b.ok { color: var(--verdigris); }
+.fact span { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+
+.tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+.task {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 13px 15px;
+  display: grid;
+  gap: 3px;
+}
+.task.run  { border-color: color-mix(in srgb, var(--verdigris) 42%, transparent); background: var(--verd-wash); }
+.task.part { border-color: color-mix(in srgb, var(--copper) 38%, transparent); background: var(--copper-wash); }
+.task .id {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--faint);
+}
+.task .nm { font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.5; }
+.task .st { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.task.run  .st { color: var(--verdigris); }
+.task.part .st { color: var(--copper); }
+
+/* ── ขั้นตอน ──────────────────────────────────────────────────────────── */
+.steps {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-top: 22px;
+}
+.step {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 92px;
+  gap: 4px 16px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--rule-soft);
+  align-items: center;
+}
+.step:first-child { border-top: 0; }
+@media (max-width: 620px) {
+  .step { grid-template-columns: 42px minmax(0, 1fr); }
+  .step .t { grid-column: 2; }
+}
+.step .n {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--copper);
+}
+.step .d { font-size: 15.5px; color: var(--ink-soft); line-height: 1.6; }
+.step .d strong { color: var(--ink); font-weight: 600; }
+.step .t {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 620px) { .step .t { text-align: left; } }
+.step.done { background: var(--verd-wash); }
+.step.done .n { color: var(--verdigris); }
+
+footer {
+  margin-top: 64px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<header>
+  <div class="eyebrow">Go application · GKE · GitOps</div>
+  <h1>GKE ใน 6 ภาพ</h1>
+  <p class="lede">
+    โปรเจกต์นี้ส่งแอป Go ขึ้น production บน GKE โดยไม่มีใครสั่ง deploy
+    ทุกอย่างเริ่มจาก commit เดียว
+  </p>
+  <div class="facts">
+    <div class="fact"><b>98</b><span>ไฟล์</span></div>
+    <div class="fact"><b class="ok">0</b><span>request หลุด<br>ตอน rollout</span></div>
+    <div class="fact"><b class="ok">0</b><span>service account key</span></div>
+    <div class="fact"><b>29</b><span>MB · ขนาด image</span></div>
+    <div class="fact"><b>฿30</b><span>ค่าเดโม GKE<br>ต่อครั้ง</span></div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════ 1 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 1</div>
+  <h2>commit เดินทางไปถึง pod ได้อย่างไร</h2>
+  <p class="say">
+    เส้นที่สำคัญที่สุดคือ <b>เส้นที่ไม่มี</b> — CI ไม่เคยแตะคลัสเตอร์
+    มันแค่ commit บอกว่าใช้ image ตัวไหน แล้ว ArgoCD ในคลัสเตอร์ไปดึงเอง
+  </p>
+
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 940 400" role="img"
+           aria-label="แผนภาพการไหล: developer push เข้า Git, GitHub Actions build และ push image ขึ้น Docker Hub แล้ว commit กลับ Git, ArgoCD ในคลัสเตอร์ GKE ดึงจาก Git เอง และ GKE ดึง image ผ่าน Artifact Registry ที่เป็น cache ของ Docker Hub โดยไม่มีเส้นเชื่อมจาก CI ไปยังคลัสเตอร์">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="a1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--copper)"/>
+          </marker>
+        </defs>
+
+        <!-- แถวบน: push path -->
+        <text class="s-lab" x="24" y="34">PUSH PATH</text>
+        <line class="s-grid" x1="24" y1="42" x2="916" y2="42"/>
+
+        <rect class="s-box"   x="24"  y="66" width="104" height="54" rx="6"/>
+        <text class="s-t" x="76"  y="98"  text-anchor="middle">developer</text>
+
+        <rect class="s-box"   x="184" y="66" width="112" height="54" rx="6"/>
+        <text class="s-t" x="240" y="92"  text-anchor="middle">Git</text>
+        <text class="s-lab" x="240" y="108" text-anchor="middle">โค้ด + manifest</text>
+
+        <rect class="s-box"   x="352" y="66" width="150" height="54" rx="6"/>
+        <text class="s-t" x="427" y="92"  text-anchor="middle">GitHub Actions</text>
+        <text class="s-lab" x="427" y="108" text-anchor="middle">test · scan · build</text>
+
+        <rect class="s-box"   x="558" y="66" width="130" height="54" rx="6"/>
+        <text class="s-t" x="623" y="92"  text-anchor="middle">Docker Hub</text>
+        <text class="s-lab" x="623" y="108" text-anchor="middle">ที่ push</text>
+
+        <!-- ลูกศรแถวบน -->
+        <line class="s-line" x1="128" y1="93" x2="176" y2="93" marker-end="url(#a1)"/>
+        <text class="s-lab" x="152" y="82" text-anchor="middle">push</text>
+
+        <line class="s-line" x1="296" y1="93" x2="344" y2="93" marker-end="url(#a1)"/>
+        <text class="s-lab" x="320" y="82" text-anchor="middle">trigger</text>
+
+        <line class="s-line" x1="502" y1="93" x2="550" y2="93" marker-end="url(#a1)"/>
+        <text class="s-lab" x="526" y="82" text-anchor="middle">:sha-abc123</text>
+
+        <!-- CI commit กลับเข้า Git -->
+        <path class="s-line" d="M400,66 C400,26 240,26 240,62" marker-end="url(#a1)"/>
+        <text class="s-lab" x="320" y="22" text-anchor="middle">commit: เปลี่ยน image tag  [skip ci]</text>
+
+        <!-- Artifact Registry -->
+        <rect class="s-box-2" x="558" y="196" width="130" height="54" rx="6"/>
+        <text class="s-t" x="623" y="222" text-anchor="middle">Artifact Registry</text>
+        <text class="s-lab" x="623" y="238" text-anchor="middle">cache · ที่ pull</text>
+        <line class="s-line" x1="623" y1="120" x2="623" y2="188" marker-end="url(#a1)"/>
+        <text class="s-lab" x="631" y="158">cache ครั้งแรก</text>
+
+        <!-- คลัสเตอร์ -->
+        <rect class="s-box-2" x="744" y="60" width="172" height="252" rx="8"/>
+        <text class="s-lab" x="830" y="80" text-anchor="middle">GKE · 3 โซน</text>
+
+        <rect class="s-hot" x="762" y="96" width="136" height="50" rx="5"/>
+        <text class="s-t" x="830" y="120" text-anchor="middle">ArgoCD</text>
+        <text class="s-hotlab" x="830" y="136" text-anchor="middle">ดึงจาก Git</text>
+
+        <rect class="s-box" x="762" y="170" width="136" height="50" rx="5"/>
+        <text class="s-t" x="830" y="194" text-anchor="middle">แอป ×2</text>
+        <text class="s-lab" x="830" y="210" text-anchor="middle">HPA 2–6</text>
+
+        <rect class="s-box" x="762" y="242" width="136" height="50" rx="5"/>
+        <text class="s-t" x="830" y="266" text-anchor="middle">LGTM</text>
+        <text class="s-lab" x="830" y="282" text-anchor="middle">metric·log·trace</text>
+
+        <!-- Git → ArgoCD (เส้นทางที่ deploy เกิดขึ้นจริง) -->
+        <path class="s-hotline" d="M240,120 L240,352 L744,352 L744,140 L756,124" marker-end="url(#a1c)"/>
+        <text class="s-hotlab" x="470" y="370" text-anchor="middle">ArgoCD ดึงจาก Git เอง — นี่คือจุดที่ deploy เกิด</text>
+
+        <!-- AR → แอป -->
+        <line class="s-line" x1="688" y1="216" x2="756" y2="200" marker-end="url(#a1)"/>
+        <text class="s-lab" x="716" y="234" text-anchor="middle">imagePull</text>
+
+        <!-- เส้นที่ไม่มี -->
+        <line class="s-dash" x1="502" y1="128" x2="740" y2="176"/>
+        <line class="s-line" x1="608" y1="138" x2="634" y2="164" stroke="var(--copper)" stroke-width="2.5"/>
+        <line class="s-line" x1="634" y1="138" x2="608" y2="164" stroke="var(--copper)" stroke-width="2.5"/>
+        <text class="s-hotlab" x="470" y="150" text-anchor="middle">ไม่มีเส้นนี้</text>
+        <text class="s-lab" x="470" y="166" text-anchor="middle">CI ไม่มี credential ของคลัสเตอร์</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>ทำไมสำคัญ</b> — ถ้า CI ถูกยึด ผู้โจมตีได้แค่ความสามารถในการ commit ซึ่ง review ได้และย้อนได้
+      ไม่ใช่สิทธิ์ apply อะไรก็ได้ลง production · rollback คือ <code>git revert</code>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════ 2 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 2</div>
+  <h2>อัปเดตแอปโดยไม่มี request หลุดเลย</h2>
+  <p class="say">
+    <code>maxUnavailable: 0</code> อย่างเดียว<b>ไม่พอ</b> — pod เก่าต้องหยุด <i>รับ</i> traffic
+    ก่อนหยุด <i>ให้บริการ</i> ช่องว่าง 5 วินาทีนี้คือกลไกทั้งหมด
+  </p>
+
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 940 300" role="img"
+           aria-label="ไทม์ไลน์ลำดับปิด pod: เมื่อได้รับ SIGTERM ที่เวลา 0 วินาที readyz เปลี่ยนเป็น 503 ทันที แต่ listener ยังเปิดรับ connection ต่อไปอีก 5 วินาที เพื่อให้ EndpointSlice อัปเดต จากนั้นจึงปิด listener และ drain request ที่ค้าง">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- แกนเวลา -->
+        <line class="s-grid" x1="150" y1="238" x2="900" y2="238"/>
+        <g class="s-lab" text-anchor="middle">
+          <text x="150" y="258">0s</text>
+          <text x="270" y="258">1s</text>
+          <text x="510" y="258">3s</text>
+          <text x="750" y="258">5s</text>
+          <text x="870" y="258">6s</text>
+        </g>
+        <line class="s-grid" x1="150" y1="60"  x2="150" y2="242"/>
+        <line class="s-grid" x1="750" y1="60"  x2="750" y2="242"/>
+
+        <!-- SIGTERM -->
+        <text class="s-hotlab" x="150" y="46" text-anchor="middle">SIGTERM</text>
+        <path class="s-hotline" d="M150,50 L150,60"/>
+
+        <!-- โซนช่องว่าง -->
+        <rect x="150" y="60" width="600" height="160" fill="var(--copper-wash)" opacity=".55"/>
+        <text class="s-hotlab" x="450" y="82" text-anchor="middle">ยังรับ connection แต่ประกาศว่าไม่พร้อม</text>
+
+        <!-- เลน 1: readyz -->
+        <text class="s-t" x="24" y="118">/readyz</text>
+        <line class="s-okline" x1="60" y1="130" x2="150" y2="130"/>
+        <text class="s-lab" x="105" y="122" text-anchor="middle">200</text>
+        <line class="s-hotline" x1="150" y1="130" x2="900" y2="130"/>
+        <text class="s-hotlab" x="450" y="122" text-anchor="middle">503 — ทันที</text>
+        <circle cx="150" cy="130" r="4.5" fill="var(--copper)"/>
+
+        <!-- เลน 2: listener -->
+        <text class="s-t" x="24" y="188">listener</text>
+        <line class="s-okline" x1="60" y1="200" x2="750" y2="200"/>
+        <text class="s-lab" x="400" y="192" text-anchor="middle">ยังเปิด · ยังตอบ request ที่ค้าง</text>
+        <line class="s-dash" x1="750" y1="200" x2="900" y2="200"/>
+        <text class="s-lab" x="828" y="192" text-anchor="middle">ปิด</text>
+        <circle cx="750" cy="200" r="4.5" fill="var(--copper)"/>
+
+        <!-- คำอธิบายช่องว่าง -->
+        <path class="s-line" d="M150,220 L750,220" marker-end="url(#a2)" marker-start="url(#a2)"/>
+        <text class="s-hotlab" x="450" y="214" text-anchor="middle">5 วินาที — รอ EndpointSlice ถอด pod ออกจาก Service</text>
+
+        <!-- ผลวัด -->
+        <text class="s-lab" x="24" y="288">วัดจาก rolling update จริงบนคลัสเตอร์:</text>
+        <text class="s-tm" x="300" y="288" fill="var(--copper)">รอ 1 วินาที → หลุด 15 จาก 10,486</text>
+        <text class="s-tm" x="620" y="288" fill="var(--verdigris)">รอ 5 วินาที → หลุด 0 จาก 8,017</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>ช่วง 5 วินาทีต้องอยู่ในโค้ด Go</b> ไม่ใช่ใน <code>preStop</code> hook —
+      เพราะ image เป็น distroless ไม่มี shell ให้รัน <code>sleep</code>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════ 3 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 3</div>
+  <h2>เข้าถึง GCP ได้โดยไม่มีไฟล์ key</h2>
+  <p class="say">
+    โจทย์ห้าม inject service account key — คำตอบคือแทน <b>ไฟล์ credential</b>
+    ด้วย <b>ความสัมพันธ์ความเชื่อถือ</b> ที่ Terraform สร้างขึ้น
+  </p>
+
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 940 330" role="img"
+           aria-label="แผนภาพ Workload Identity: Terraform สร้าง Google service account และผูกสิทธิ์ workloadIdentityUser ให้กับ Kubernetes service account ในเนมสเปซที่ระบุ ตัว Kubernetes service account มี annotation ชี้กลับไปยัง Google service account และ pod ขอ token อายุสั้นจาก metadata server โดยไม่มีไฟล์ JSON key ที่ใดเลย">
+        <defs>
+          <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="a3c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--copper)"/>
+          </marker>
+        </defs>
+
+        <!-- ฝั่ง Terraform -->
+        <text class="s-lab" x="24" y="34">TERRAFORM สร้าง</text>
+        <line class="s-grid" x1="24" y1="42" x2="430" y2="42"/>
+
+        <rect class="s-box" x="24" y="64" width="200" height="58" rx="6"/>
+        <text class="s-t"  x="124" y="88"  text-anchor="middle">Google SA</text>
+        <text class="s-tm" x="124" y="106" text-anchor="middle">app-prod@…</text>
+
+        <rect class="s-hot" x="24" y="156" width="406" height="70" rx="6"/>
+        <text class="s-t"  x="227" y="180" text-anchor="middle">ผูกสิทธิ์ workloadIdentityUser ให้ใคร</text>
+        <text class="s-tm" x="227" y="202" text-anchor="middle" fill="var(--copper)">…svc.id.goog[prod / go-sample-app]</text>
+        <text class="s-lab" x="227" y="218" text-anchor="middle">เนมสเปซ · ชื่อ KSA — ต้องตรงเป๊ะ</text>
+
+        <line class="s-line" x1="124" y1="122" x2="124" y2="148" marker-end="url(#a3)"/>
+
+        <!-- ฝั่ง Kubernetes -->
+        <text class="s-lab" x="520" y="34">KUBERNETES</text>
+        <line class="s-grid" x1="520" y1="42" x2="916" y2="42"/>
+
+        <rect class="s-box" x="520" y="64" width="396" height="70" rx="6"/>
+        <text class="s-t"  x="718" y="88"  text-anchor="middle">ServiceAccount go-sample-app</text>
+        <text class="s-tm" x="718" y="110" text-anchor="middle">iam.gke.io/gcp-service-account: app-prod@…</text>
+        <text class="s-lab" x="718" y="126" text-anchor="middle">annotation เดียว — ลิงก์ทั้งหมดอยู่ตรงนี้</text>
+
+        <rect class="s-box" x="520" y="168" width="180" height="58" rx="6"/>
+        <text class="s-t" x="610" y="200" text-anchor="middle">pod</text>
+
+        <rect class="s-box-2" x="736" y="168" width="180" height="58" rx="6"/>
+        <text class="s-t"  x="826" y="192" text-anchor="middle">metadata server</text>
+        <text class="s-lab" x="826" y="208" text-anchor="middle">ของ GKE</text>
+
+        <line class="s-line" x1="610" y1="134" x2="610" y2="160" marker-end="url(#a3)"/>
+        <line class="s-line" x1="700" y1="197" x2="728" y2="197" marker-end="url(#a3)"/>
+        <text class="s-lab" x="714" y="188" text-anchor="middle">ขอ</text>
+
+        <!-- เชื่อมสองฝั่ง -->
+        <path class="s-hotline" d="M430,180 L470,180 L470,99 L512,99" marker-end="url(#a3c)"/>
+        <text class="s-hotlab" x="470" y="146" text-anchor="middle">ระบุชื่อ</text>
+        <text class="s-lab"    x="470" y="162" text-anchor="middle">ไม่ได้ส่งความลับ</text>
+
+        <!-- token -->
+        <path class="s-okline" d="M826,226 L826,262 L610,262 L610,232" marker-end="url(#a3)" stroke="var(--verdigris)"/>
+        <text class="s-tm" x="718" y="280" text-anchor="middle" fill="var(--verdigris)">token อายุ ~1 ชม. หมุนเองอัตโนมัติ</text>
+
+        <!-- สิ่งที่ไม่มี -->
+        <rect class="s-box" x="24" y="256" width="200" height="52" rx="6" stroke-dasharray="5 4" opacity=".55"/>
+        <text class="s-tm" x="124" y="288" text-anchor="middle" opacity=".7">key.json</text>
+        <line x1="44" y1="266" x2="204" y2="298" stroke="var(--copper)" stroke-width="2.5"/>
+        <line x1="204" y1="266" x2="44" y2="298" stroke="var(--copper)" stroke-width="2.5"/>
+        <text class="s-hotlab" x="240" y="278">ไม่มีไฟล์นี้ที่ไหนเลย</text>
+        <text class="s-lab"    x="240" y="294">CI มีคำสั่ง grep บังคับไว้</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>จุดที่พลาดเงียบได้</b> — เปิด Workload Identity ที่ระดับคลัสเตอร์อย่างเดียวไม่พอ
+      node pool ต้องตั้ง <code>GKE_METADATA</code> ด้วย ไม่งั้น pod จะได้ identity ของ <i>node</i> แทน
+      และไม่มี error อะไรบอก
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════ 4 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 4</div>
+  <h2>ทำไม Deployment ไม่มี <code>replicas</code></h2>
+  <p class="say">
+    ใส่ <code>replicas</code> + HPA + ArgoCD <code>selfHeal</code> = ชนกันสามทาง วนไม่จบ
+    ทางแก้คือ<b>ให้เจ้าของมีคนเดียว</b>
+  </p>
+
+  <figure>
+    <div class="canvas">
+      <svg viewBox="0 0 940 270" role="img"
+           aria-label="เปรียบเทียบสองแบบ: แบบซ้ายใส่ spec.replicas เท่ากับ 2 ทำให้ HPA ขยายเป็น 4 แล้ว ArgoCD selfHeal กดกลับเป็น 2 วนซ้ำไม่จบ แบบขวาไม่ใส่ spec.replicas เลย HPA เป็นเจ้าของจำนวน replica คนเดียว และ ArgoCD ถูกสั่งให้มองข้ามฟิลด์นั้น จึงรายงานสถานะ Synced">
+        <defs>
+          <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="a4c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--copper)"/>
+          </marker>
+          <marker id="a4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--verdigris)"/>
+          </marker>
+        </defs>
+
+        <!-- ซ้าย: พัง -->
+        <text class="s-hotlab" x="24" y="32">ถ้าใส่ spec.replicas: 2</text>
+        <line class="s-grid" x1="24" y1="40" x2="446" y2="40"/>
+
+        <rect class="s-box" x="24"  y="66" width="128" height="52" rx="6"/>
+        <text class="s-t" x="88"  y="97" text-anchor="middle">HPA</text>
+
+        <rect class="s-hot" x="180" y="66" width="130" height="52" rx="6"/>
+        <text class="s-t"  x="245" y="90"  text-anchor="middle">Deployment</text>
+        <text class="s-tm" x="245" y="108" text-anchor="middle" fill="var(--copper)">replicas: ?</text>
+
+        <rect class="s-box" x="338" y="66" width="108" height="52" rx="6"/>
+        <text class="s-t" x="392" y="97" text-anchor="middle">ArgoCD</text>
+
+        <path class="s-hotline" d="M152,84 L172,84" marker-end="url(#a4c)"/>
+        <text class="s-hotlab" x="162" y="74" text-anchor="middle">4</text>
+        <path class="s-hotline" d="M338,102 L318,102" marker-end="url(#a4c)"/>
+        <text class="s-hotlab" x="328" y="118" text-anchor="middle">2</text>
+
+        <path class="s-hotline" d="M88,124 L88,168 L392,168 L392,124" marker-end="url(#a4c)"/>
+        <text class="s-hotlab" x="240" y="188" text-anchor="middle">HPA ขยาย → ArgoCD กดกลับ → ขยายอีก</text>
+        <text class="s-hotlab" x="240" y="208" text-anchor="middle">วนไม่จบ</text>
+
+        <!-- ขวา: ที่เราทำ -->
+        <text class="s-lab" x="516" y="32" fill="var(--verdigris)">ที่โปรเจกต์นี้ทำ</text>
+        <line class="s-grid" x1="516" y1="40" x2="916" y2="40"/>
+
+        <rect class="s-ok" x="516" y="66" width="128" height="52" rx="6"/>
+        <text class="s-t"  x="580" y="90"  text-anchor="middle">HPA</text>
+        <text class="s-lab" x="580" y="106" text-anchor="middle">เจ้าของคนเดียว</text>
+
+        <rect class="s-box" x="672" y="66" width="130" height="52" rx="6"/>
+        <text class="s-t"  x="737" y="90"  text-anchor="middle">Deployment</text>
+        <text class="s-tm" x="737" y="108" text-anchor="middle">ไม่มี replicas</text>
+
+        <rect class="s-box" x="830" y="66" width="86" height="52" rx="6"/>
+        <text class="s-t" x="873" y="97" text-anchor="middle">ArgoCD</text>
+
+        <path class="s-okline" d="M644,92 L664,92" marker-end="url(#a4g)"/>
+        <text class="s-lab" x="654" y="82" text-anchor="middle">2–6</text>
+
+        <path class="s-dash" d="M830,92 L810,92"/>
+        <text class="s-lab" x="820" y="112" text-anchor="middle">ข้าม</text>
+
+        <text class="s-tm"  x="716" y="170" text-anchor="middle" fill="var(--verdigris)">ignoreDifferences: /spec/replicas</text>
+        <text class="s-tm"  x="716" y="190" text-anchor="middle" fill="var(--verdigris)">+ RespectIgnoreDifferences</text>
+        <text class="s-lab" x="716" y="208" text-anchor="middle">ขาดตัวที่สอง = ดูเหมือนตั้งค่าแล้วแต่ไม่ทำงาน</text>
+
+        <text class="s-lab" x="716" y="240" text-anchor="middle">ผลจริง: scale เป็น 4 ด้วยมือ แล้ว ArgoCD ยังรายงาน Synced</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>บทเรียนที่ใช้ได้ทั่วไป</b> — ทุกฟิลด์ใน Kubernetes ควรมีเจ้าของเพียงหนึ่ง
+      ถ้าสองตัวควบคุมค่าเดียวกัน มันจะสู้กันตลอดไป
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ══════════════════════════════ 5 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 5</div>
+  <h2>ทำอย่างไรจึงจะได้ของขึ้นจริง</h2>
+  <p class="say">
+    แถบเขียวคือขั้นที่<b>รันจริงแล้ว</b> ที่เหลือรออยู่ — รวมเวลา ~2 ชั่วโมง เสียเงิน ~฿30
+  </p>
+
+  <div class="steps">
+    <div class="step done"><span class="n">0</span><span class="d"><strong>เติมโค้ดให้แอปครบ</strong> — probe, metrics, trace, graceful shutdown, ปิดช่อง XSS</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">1</span><span class="d"><strong>สร้าง image</strong> — multi-stage ไป distroless 29 MB · Trivy 0 ช่องโหว่</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">2</span><span class="d"><strong>เขียน manifest</strong> — Kustomize base + overlay · ทดสอบ zero-downtime แล้ว</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">3</span><span class="d"><strong>เตรียม GCP</strong> — trial ฿10,066 · เช็คโควตา · สร้าง bucket เก็บ state</span><span class="t">เสร็จ</span></div>
+    <div class="step"><span class="n">4</span><span class="d"><strong>terraform apply</strong> — VPC, private GKE 3 โซน, NAT, Workload Identity, registry cache</span><span class="t">15–18 น.</span></div>
+    <div class="step"><span class="n">5</span><span class="d"><strong>ติดตั้ง ArgoCD</strong> แล้วให้มัน sync แอปจาก Git เอง</span><span class="t">15 น.</span></div>
+    <div class="step"><span class="n">6</span><span class="d"><strong>sync LGTM</strong> — Prometheus, Loki, Tempo, Grafana, Alloy ตามลำดับ</span><span class="t">20 น.</span></div>
+    <div class="step"><span class="n">7</span><span class="d"><strong>เก็บหลักฐาน</strong> — ยิง traffic แล้วไล่จากกราฟ → trace → log</span><span class="t">20 น.</span></div>
+    <div class="step"><span class="n">8</span><span class="d"><strong>รื้อทิ้ง</strong> — destroy แล้วเช็คว่าไม่มี disk ค้าง</span><span class="t">10 น.</span></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ 6 ══════════════════════════════ -->
+<section>
+  <div class="num">ภาพที่ 6</div>
+  <h2>อะไรพิสูจน์แล้ว อะไรยัง</h2>
+  <p class="say">
+    แยก <b>เขียนเสร็จ</b> ออกจาก <b>รันแล้ว</b> — เพราะบั๊กเกือบทุกตัวที่เจอในโปรเจกต์นี้
+    ผ่านการอ่านโค้ดมาได้สบาย ๆ และถูกจับได้ตอนเอาไปรัน
+  </p>
+
+  <div class="tasks">
+    <div class="task run">  <span class="id">TASK 0</span><span class="nm">แอป Go</span>       <span class="st">รันแล้ว · 9 เทสต์ผ่าน</span></div>
+    <div class="task run">  <span class="id">TASK 1</span><span class="nm">Docker image</span>  <span class="st">รันแล้ว · 29 MB, Trivy 0</span></div>
+    <div class="task part"> <span class="id">TASK 2</span><span class="nm">push ขึ้น registry</span><span class="st">ยังไม่มีบัญชี Docker Hub</span></div>
+    <div class="task run">  <span class="id">TASK 3</span><span class="nm">Kustomize</span>     <span class="st">รันแล้ว · 0 หลุดจาก 8,017</span></div>
+    <div class="task part"> <span class="id">TASK 4</span><span class="nm">Terraform GKE</span> <span class="st">plan พร้อม · รอ apply</span></div>
+    <div class="task">      <span class="id">TASK 5</span><span class="nm">ArgoCD</span>        <span class="st">ยังไม่เคยรัน</span></div>
+    <div class="task">      <span class="id">TASK 6</span><span class="nm">LGTM</span>          <span class="st">ยังไม่เคยรัน</span></div>
+    <div class="task part"> <span class="id">TASK 7</span><span class="nm">CI/CD</span>         <span class="st">lint ผ่าน · ยังไม่มี repo</span></div>
+    <div class="task">      <span class="id">TASK 8</span><span class="nm">Ansible</span>       <span class="st">ยังไม่เคยรัน</span></div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><b class="ok">4</b><span>รันจริงแล้ว</span></div>
+    <div class="fact"><b>3</b><span>พร้อม แต่ยังไม่รัน</span></div>
+    <div class="fact"><b>3</b><span>ยังไม่เคยรันเลย</span></div>
+  </div>
+</section>
+
+<footer>
+  <span>98 ไฟล์ · 5 commit</span>
+  <span>Task 0–8 เขียนครบ</span>
+  <span>ข้อมูล ณ 1 ก.ย. 2026</span>
+</footer>
+
+</div>
+</body>
+</html>

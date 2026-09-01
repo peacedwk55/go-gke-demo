@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Wraps the artifact fragment into a standalone HTML document for the repository.
+# Wraps an Artifact fragment into a standalone HTML document for the repository.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # Why this exists
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# repo-guide.html is authored as a *fragment*: no <!doctype>, no <html>, no
+# The pages at the repository root are authored as Artifact *fragments*: no <!doctype>, no <html>, no
 # <head>. That is what the Artifact platform requires — it supplies the skeleton
 # at publish time, which is why the published page renders correctly.
 #
@@ -25,27 +25,37 @@
 #      from the other rather than maintaining both by hand.
 #
 # Usage:
-#   ./scripts/build-repo-guide.sh <path-to-fragment>
+#   ./scripts/wrap-standalone-html.sh                 # re-wrap every root .html in place
+#   ./scripts/wrap-standalone-html.sh SRC [OUT]      # wrap one fragment
 #
-# With no argument it re-wraps the repo copy in place, which is safe and
-# idempotent: the wrapper is stripped before being re-applied.
+# Both forms are idempotent: an existing wrapper is stripped before being
+# re-applied, so running it twice changes nothing.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-OUT="repo-guide.html"
 SRC="${1:-}"
+OUT="${2:-}"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
+# With no arguments, re-wrap every standalone page in the repo root in place.
+# Idempotent, so this is the safe thing to run after editing any of them.
 if [ -z "$SRC" ]; then
-    if [ ! -f "$OUT" ]; then
-        echo "error: no fragment given and $OUT does not exist" >&2
-        exit 1
-    fi
-    SRC="$OUT"
+    found=0
+    for f in *.html; do
+        [ -f "$f" ] || continue
+        found=1
+        "$0" "$f" "$f"
+    done
+    [ "$found" = 1 ] || { echo "error: no .html files in the repository root" >&2; exit 1; }
+    exit 0
 fi
+
+# Output defaults to the source's own name, which is what makes an in-place
+# re-wrap work.
+[ -n "$OUT" ] || OUT="$(basename "$SRC")"
 
 # Strip an existing wrapper if present, so re-running is idempotent.
 #
@@ -85,7 +95,6 @@ fi
     # Tells the browser the page handles both themes, so form controls and
     # scrollbars match the palette instead of staying light.
     echo '<meta name="color-scheme" content="light dark">'
-    echo '<meta name="description" content="อธิบายทุกโฟลเดอร์ทุกไฟล์ในรีโป Go-on-GKE พร้อมวงจรชีวิตของโปรเจกต์และแผนขั้นต่อไป">'
     head -n "$STYLE_END" "$TMP"
     echo '</head>'
     echo '<body>'

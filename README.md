@@ -76,20 +76,26 @@ attacker gets the ability to make a reviewable, revertible commit — not cluste
 Every directory has its own `README.md` covering the decisions specific to it. This file covers what
 spans them.
 
-### File-by-file walkthrough
+### Two standalone pages
 
-[`repo-guide.html`](repo-guide.html) — a standalone page describing **every** folder and file in the
-repository, top to bottom, with what each does and why it exists. Open it directly in a browser; it
-has no dependencies and needs no build step.
+Both open directly in a browser — no build step, no dependencies. Regenerate the wrapper after
+editing either with `./scripts/wrap-standalone-html.sh`.
 
-Useful when the question is "what is this file for?" rather than "how do I run this?". It also
-collects, in one place, the failure modes in this stack that are silent — a misplaced
-`.dockerignore`, `ignoreDifferences` without `RespectIgnoreDifferences`, a Workload Identity pool
-without `GKE_METADATA`, `docker_container` without `comparisons: strict` — each of which looks
-configured and does nothing.
+**[`project-overview.html`](project-overview.html)** — the project in six diagrams: how a commit
+reaches a pod, why `maxUnavailable: 0` alone is not zero downtime, how the workload reaches GCP with
+no key file, why the Deployment has no `replicas`, the steps, and what is proven versus written.
+Start here if you want the shape of the thing in two minutes.
 
-It is excluded from the Docker build context (see `.dockerignore`); at 94 KB it would otherwise be
+**[`repo-guide.html`](repo-guide.html)** — every folder and file, top to bottom, plus the project
+lifecycle and the plan. Start here when the question is "what is this file for?".
+
+Both are excluded from the Docker build context (see `.dockerignore`) — they would otherwise be
 transferred to the daemon on every build for no reason.
+
+Between them the two pages collect, in one place, the failure modes in this stack that are
+**silent** — a misplaced `.dockerignore`, `ignoreDifferences` without `RespectIgnoreDifferences`, a
+Workload Identity pool without `GKE_METADATA`, `docker_container` without `comparisons: strict` —
+each of which looks configured and does nothing.
 
 ---
 
