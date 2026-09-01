@@ -23,10 +23,18 @@ on:
     # the bump cannot retrigger this workflow. [skip ci] in the commit message is
     # the other half — belt and braces, because a future change to these filters
     # would silently reintroduce an infinite build loop.
+    #
+    # Documentation is excluded for a second, separate reason: it cannot change
+    # the image, so rebuilding on a docs commit would push a fresh sha- tag for
+    # a byte-identical binary and bump the manifest to it — which is a real
+    # production rollout, caused by editing a paragraph. Observed on 863b908,
+    # a commit that touched only *.md and root *.html: the .md files were
+    # already excluded, the .html files were not.
     paths-ignore:
       - "k8s/overlays/**"
       - "**/*.md"
       - "docs/**"
+      - "*.html"
   pull_request:
     branches: [main]
 
