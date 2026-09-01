@@ -11,3 +11,11 @@ collections:
   - name: community.general
     version: "9.5.1"
     # timezone module in the common role.
+  - name: ansible.posix
+    version: "1.6.2"
+    # Provides the profile_tasks callback that ansible.cfg enables.
+    #
+    # Declared here because it was missing, and the symptom was quiet: a
+    # "Skipping callback plugin 'profile_tasks', unable to load" warning and no
+    # per-task timings. The run still succeeds, so a config referring to a
+    # plugin nobody ships is easy to leave broken for a long time.

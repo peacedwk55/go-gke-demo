@@ -28,16 +28,38 @@
   changed_when: false
   failed_when: false
 
-- name: Download and unpack node_exporter
-  ansible.builtin.unarchive:
-    src: >-
+# Download and verify are a SEPARATE task from unpacking, and that split is the
+# whole point rather than a stylistic preference.
+#
+# This was originally one `unarchive` task carrying `checksum:`. That parameter
+# does not exist on unarchive:
+#
+#   Unsupported parameters for (ansible.legacy.unarchive) module: checksum
+#
+# So the task failed on every run, and the supply-chain control this role
+# advertises had never actually run once. `get_url` is the module that verifies
+# checksums; unarchive only extracts. ansible-lint cannot catch this — an
+# unsupported parameter is a runtime module contract, not syntax.
+- name: Download node_exporter and verify its checksum
+  ansible.builtin.get_url:
+    url: >-
       {{ node_exporter_download_base }}/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz
+    dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+    # THE supply-chain control. A pinned version without this still trusts
+    # whatever the download server returns; with it, a compromised or MITM-ed
+    # artefact fails the play instead of being installed and started as a system
+    # service.
+    checksum: "{{ node_exporter_checksum }}"
+    mode: "0644"
+    owner: root
+    group: root
+  when: node_exporter_version not in (node_exporter_installed.stdout | default(''))
+
+- name: Unpack the verified archive
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
     dest: /tmp
     remote_src: true
-    # THE supply-chain control. Without this, a compromised or MITM-ed download
-    # is installed and started as a system service with no indication anything
-    # is wrong. With it, a mismatch fails the play loudly.
-    checksum: "{{ node_exporter_checksum }}"
     creates: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
   when: node_exporter_version not in (node_exporter_installed.stdout | default(''))
 

@@ -57,7 +57,18 @@
     # Validate the JSON before it lands. A malformed daemon.json makes dockerd
     # refuse to start, and the handler would then restart it into a dead state --
     # taking every container on the host with it.
-    validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))"
+    #
+    # The %s is mandatory and is where Ansible substitutes the temporary file
+    # path. Without it the task fails on EVERY run regardless of whether the
+    # JSON is valid:
+    #
+    #   validate must contain %s: python3 -c "import json,sys; json.load(...)"
+    #
+    # Which is how this was first written — assuming Ansible appends the path
+    # rather than substitutes it. The role could not complete at all, and
+    # ansible-lint cannot see it because the mistake is in a runtime parameter
+    # contract, not in syntax. Only running it surfaces this.
+    validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))" %s
   notify: Restart docker
   # notify, not a restart task. The restart happens only if the template
   # actually changed, which is what keeps the second run at changed=0.

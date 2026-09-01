@@ -18,6 +18,7 @@ common_base_packages:
   - curl
   - gnupg
   - python3-pip
+  - tzdata
 
 # ── docker ──────────────────────────────────────────────────────────────────
 # Log rotation is the point of templating daemon.json. Docker's default
@@ -25,8 +26,19 @@ common_base_packages:
 # takes the node down. 10m x 3 caps each container at 30 MB.
 docker_log_max_size: "10m"
 docker_log_max_file: "3"
-docker_users:
-  - "{{ ansible_user }}"
+# Empty by default, and deliberately so on two counts.
+#
+# Correctness: this was `- "{{ ansible_user }}"`, which fails outright with
+# "'ansible_user' is undefined" on any inventory that does not set it —
+# a local connection, or one that lets ~/.ssh/config supply the username.
+#
+# Least privilege: membership of the docker group is root-equivalent. Anyone in
+# it can bind-mount / into a privileged container. Granting that as an automatic
+# side effect of running a Docker role is the wrong default; it should be an
+# explicit decision, like every other privilege in this repository.
+#
+# To grant it, name the accounts:  docker_users: [ubuntu]
+docker_users: []
 
 # ── nginx_container ─────────────────────────────────────────────────────────
 # Pinned tag, never :latest — the same rule as the application image.
@@ -39,6 +51,6 @@ nginx_container_port: 80
 # Version and checksum are pinned together. A pinned version without a checksum
 # still trusts whatever the download server returns.
 node_exporter_version: "1.8.2"
-node_exporter_checksum: "sha256:6809dd0b3ec45fd6e992c19071fab216c07deba9d2d8b5f78a3f4e34e9dc3a6e"
+node_exporter_checksum: "sha256:6809dd0b3ec45fd6e992c19071d6b5253aed3ead7bf0686885a51d85c6643c66"
 node_exporter_port: 9100
 node_exporter_user: node_exporter

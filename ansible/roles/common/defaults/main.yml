@@ -7,3 +7,7 @@ common_base_packages:
   - ca-certificates
   - curl
   - gnupg
+  # tzdata is not a nicety: the timezone task below fails outright without it on a
+  # minimal image ("given timezone Asia/Bangkok is not available"). A role should
+  # install what it depends on rather than assume the base image carries it.
+  - tzdata

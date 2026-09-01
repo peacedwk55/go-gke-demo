@@ -8,5 +8,14 @@ galaxy_info:
   platforms:
     - name: Ubuntu
       versions: [jammy, noble]
-dependencies:
-  - role: docker
+# No meta dependency on the docker role, even though this role genuinely needs
+# Docker present.
+#
+# site.yml already lists both in order, and declaring the dependency here as
+# well makes Ansible run the whole docker role a SECOND time — once from the
+# play's roles list, once as this dependency. Harmless, because the role is
+# idempotent, but it doubles the output and the runtime for nothing, and it
+# obscures which pass a given task belongs to when reading a failure.
+#
+# The relationship is expressed where a reader looks for ordering: site.yml.
+dependencies: []
