@@ -120,6 +120,23 @@ variable "max_nodes_per_zone" {
 
 # ── Optional hardening ──────────────────────────────────────────────────────
 
+variable "spot" {
+  description = <<-EOT
+    Use Spot VMs for the node pool. 60-90% cheaper, reclaimable at short notice.
+
+    false for production. Set true for a demo run, where preemption is a feature
+    rather than a risk: it exercises the PDB and the graceful-drain path under
+    conditions that are hard to manufacture deliberately.
+
+    Caveat worth knowing before enabling it in earnest: GKE's shutdown window for
+    a preempted Spot VM is shorter than this workload's
+    terminationGracePeriodSeconds (30s), so a preemption can truncate the drain.
+    The surge replica and the PDB are what still hold in that case.
+  EOT
+  type        = bool
+  default     = false
+}
+
 variable "deletion_protection" {
   description = "Blocks accidental cluster deletion. Because it is stored in state, teardown requires `terraform apply -var deletion_protection=false` BEFORE `terraform destroy`."
   type        = bool

@@ -94,19 +94,50 @@ cluster CA and endpoint, so restrict the bucket to the Terraform principals.
 
 ---
 
+## Step 0 — check the CPU quota BEFORE anything else
+
+```bash
+gcloud services enable compute.googleapis.com
+
+gcloud compute regions describe asia-southeast1 \
+  --format="table(quotas.metric,quotas.limit,quotas.usage)" \
+  | grep -iE "^CPUS|SSD_TOTAL|DISKS_TOTAL_GB|IN_USE_ADDRESSES"
+```
+
+| Metric | Needed by the default profile | Needed by `demo.tfvars` |
+|---|---|---|
+| `CPUS` | 12 (3 × e2-standard-4) | **6** (3 × e2-standard-2) |
+| `DISKS_TOTAL_GB` | 265 | 205 |
+| `IN_USE_ADDRESSES` | 1 | 1 |
+
+This is step 0 rather than a footnote for a specific reason: **the Google Cloud
+free trial forbids requesting quota increases.** If the project's default CPU
+quota is below what the profile needs, there is no way to raise it without
+upgrading to a paid account — which is the thing the trial exists to avoid. And
+the failure surfaces *mid-apply*, after the VPC and cluster already exist, as a
+generic quota error on the node pool.
+
+Fresh projects have historically defaulted to well under 12 vCPU per region, so
+`demo.tfvars` exists to fit inside a small quota.
+
 ## Apply
 
 ```bash
 cd envs/prod
-cp terraform.tfvars.example terraform.tfvars
+
+# demo run — small nodes, Spot, disposable
+cp demo.tfvars.example demo.tfvars
 # edit: project_id, and master_authorized_networks with `curl -s https://ifconfig.me`/32
 
 terraform init -backend-config="bucket=<project>-tfstate"
 terraform fmt -check -recursive ../..
 terraform validate
-terraform plan -out=tfplan
+terraform plan -var-file=demo.tfvars -out=tfplan
 terraform apply tfplan
 ```
+
+For a production apply, use `terraform.tfvars.example` instead: larger nodes,
+on-demand rather than Spot, and `deletion_protection = true`.
 
 First apply takes roughly 12–18 minutes; most of it is the regional control plane.
 
@@ -141,6 +172,41 @@ terraform destroy                                # then
 `deletion_protection` is stored in **state**, not read from the CLI invocation, so `terraform
 destroy` alone fails with `Cannot destroy cluster because deletion_protection is set to true`. It is
 a variable rather than a hardcoded `true` precisely so this path exists.
+
+`demo.tfvars` sets it `false` from the start, so a demo teardown is one step. That is only
+acceptable because the demo cluster is disposable.
+
+### After destroy — verify, do not assume
+
+```bash
+terraform destroy -var-file=demo.tfvars
+
+# 1. cluster actually gone
+gcloud container clusters list
+
+# 2. THE expensive one: disks Kubernetes created that Terraform never knew about
+gcloud compute disks list --filter="-users:*" \
+  --format="table(name,sizeGb,type,zone.basename())"
+
+# 3. the rest
+gcloud compute addresses list
+gcloud compute routers list
+gcloud artifacts repositories list
+```
+
+**Step 2 is the one that costs money after you think you are done.** The LGTM stack's PVCs are
+created by Kubernetes, not by Terraform, so `terraform destroy` has no knowledge of them. With a
+`Retain` reclaim policy — or if the PVC outlives the cluster deletion — 115 GB of `pd-balanced` sits
+there billing roughly **$14/month** for nothing, and nothing in the Terraform output hints at it.
+
+Delete what step 2 lists, once you have confirmed the names are the demo's:
+
+```bash
+gcloud compute disks delete <name> --zone=<zone>
+```
+
+The GCS state bucket is worth keeping between sessions (it costs a few cents and holds the history);
+remove it only when finished with the project entirely.
 
 A regional cluster with 3 × `e2-standard-4` costs roughly **US$8–13/day**, so destroy between
 sessions. `google_project_service.required` sets `disable_on_destroy = false` on purpose — teardown

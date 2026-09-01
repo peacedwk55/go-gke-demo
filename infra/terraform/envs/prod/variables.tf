@@ -122,3 +122,9 @@ variable "deletion_protection" {
   type        = bool
   default     = true
 }
+
+variable "spot" {
+  description = "Use Spot VMs for the node pool. false for production; true for a demo run, where preemption also exercises the PDB and the drain path. See modules/gke/variables.tf."
+  type        = bool
+  default     = false
+}

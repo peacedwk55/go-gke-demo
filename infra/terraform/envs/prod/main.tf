@@ -145,5 +145,6 @@ module "gke" {
   min_nodes_per_zone = var.min_nodes_per_zone
   max_nodes_per_zone = var.max_nodes_per_zone
 
+  spot                = var.spot
   deletion_protection = var.deletion_protection
 }

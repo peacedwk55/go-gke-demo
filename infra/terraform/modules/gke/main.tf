@@ -226,6 +226,22 @@ resource "google_container_node_pool" "primary" {
     disk_size_gb = var.disk_size_gb
     image_type   = "COS_CONTAINERD"
 
+    # Spot VMs: 60-90% cheaper, reclaimable at ~30 seconds' notice.
+    #
+    # false for production, and that default is the important part. But for a
+    # demo run this is more than a cost lever: preemption exercises the PDB and
+    # the graceful-drain path under conditions that are otherwise hard to
+    # manufacture. A node vanishing mid-rollout is exactly the scenario
+    # maxUnavailable: 0 + minAvailable: 1 exist for.
+    #
+    # One honest caveat rather than a claim it is free of tension: GKE's node
+    # shutdown window for a preempted Spot VM is shorter than this workload's
+    # terminationGracePeriodSeconds (30s), so a preemption can cut the drain
+    # short. That is a real limit of Spot, not a flaw in the drain sequence —
+    # and observing it is part of what makes the demo worth running. The
+    # protection that still holds is the surge replica plus the PDB.
+    spot = var.spot
+
     # The least-privilege SA from the iam module. Leaving this unset is the
     # trap: GKE then uses the Compute Engine default SA, which holds
     # roles/editor on the entire project.
