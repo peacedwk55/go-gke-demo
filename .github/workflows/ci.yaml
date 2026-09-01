@@ -107,6 +107,13 @@ jobs:
       # means a green CI check. An invariant that can only be evaluated by
       # pushing is one people learn to work around.
       - name: Repository invariants
+        env:
+          # Invariant 9 resolves every action ref against the GitHub API.
+          # Unauthenticated that is 60 calls/hour PER IP, and Actions runners
+          # share IPs, so the quota is usually already spent — which made the
+          # check unverifiable in exactly the place it matters most. The
+          # automatic token raises it to 5000/hour and needs no configuration.
+          GITHUB_TOKEN: ${{ github.token }}
         run: ./scripts/check-invariants.sh
 
       - name: Render and validate manifests

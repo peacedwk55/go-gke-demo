@@ -184,12 +184,35 @@ check "root HTML declares charset in the first 1024 bytes" "$noenc"
 # real protection is upstream's own fix: newer trivy-action versions pin
 # setup-trivy by commit SHA rather than by tag, which cannot be retagged out
 # from under them. Same reason a SHA beats a tag in our own workflows.
+# ── "cannot verify" is not "invalid" ────────────────────────────────────────
+#
+# The first version of this check treated any failed curl as a bad ref. That is
+# wrong, and it turned the check red in CI on refs that were perfectly fine:
+# unauthenticated GitHub API calls are limited to 60/hour PER IP, Actions
+# runners share IPs, and this check makes up to two calls per ref. The quota is
+# routinely already spent before the job starts.
+#
+# So the status code decides:
+#     200  -> the ref exists
+#     404  -> the ref does not exist        <- the only failure
+#   other  -> we could not tell (rate limit, outage, timeout) -> skip, say so
+#
+# A check that cannot distinguish "broken" from "unknown" produces exactly the
+# kind of red that people learn to ignore.
+gh_status() {
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        curl -s -m 10 -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" "$1" 2>/dev/null || echo 000
+    else
+        curl -s -m 10 -o /dev/null -w '%{http_code}' "$1" 2>/dev/null || echo 000
+    fi
+}
+
 if [ "${SKIP_NETWORK_CHECKS:-}" = "1" ]; then
-    printf '  %sSKIP%s  action refs resolve (SKIP_NETWORK_CHECKS=1)\n' "$RED" "$RESET"
-elif ! curl -sf -m 5 -o /dev/null https://api.github.com/rate_limit 2>/dev/null; then
-    printf '  %sSKIP%s  action refs resolve (no network)\n' "$RED" "$RESET"
+    printf '  %sSKIP%s  every workflow action ref resolves (SKIP_NETWORK_CHECKS=1)\n' "$RED" "$RESET"
 else
     badrefs=""
+    unknown=0
     # `while read` rather than `for` over a command substitution: an action ref
     # never contains whitespace today, but word-splitting a URL list is the kind
     # of shortcut that breaks quietly later (shellcheck SC2013).
@@ -197,13 +220,25 @@ else
         [ -n "$u" ] || continue
         repo="${u%@*}"
         ref="${u#*@}"
-        # A ref may be a tag or a branch, so try both endpoints before failing.
-        if ! curl -sf -m 10 -o /dev/null "https://api.github.com/repos/$repo/git/ref/tags/$ref" 2>/dev/null \
-           && ! curl -sf -m 10 -o /dev/null "https://api.github.com/repos/$repo/commits/$ref" 2>/dev/null; then
-            badrefs="${badrefs}${badrefs:+$'\n'}$u"
-        fi
+        # A ref may be a tag or a branch, so a 404 on tags is not yet a verdict.
+        st="$(gh_status "https://api.github.com/repos/$repo/git/ref/tags/$ref")"
+        [ "$st" = "404" ] && st="$(gh_status "https://api.github.com/repos/$repo/commits/$ref")"
+        case "$st" in
+            200) ;;
+            404) badrefs="${badrefs}${badrefs:+$'\n'}$u  (404)" ;;
+            *)   unknown=$((unknown + 1)) ;;
+        esac
     done < <(grep -hoE 'uses: [^ ]+' .github/workflows/*.y*ml 2>/dev/null | cut -d' ' -f2 | sort -u)
-    check "every workflow action ref resolves" "$badrefs"
+
+    if [ -n "$badrefs" ]; then
+        check "every workflow action ref resolves" "$badrefs"
+    elif [ "$unknown" -gt 0 ]; then
+        printf '  %sSKIP%s  every workflow action ref resolves (%d unverifiable — rate limit or no network)\n' \
+            "$RED" "$RESET" "$unknown"
+        printf '        set GITHUB_TOKEN to raise the API quota from 60/hour to 5000\n'
+    else
+        pass "every workflow action ref resolves"
+    fi
 fi
 
 echo
