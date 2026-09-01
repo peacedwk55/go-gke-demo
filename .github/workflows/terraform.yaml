@@ -62,23 +62,33 @@ jobs:
   plan:
     name: plan
     needs: fmt-validate
-    # Three conditions, and the first one is the fix for a real failure.
+    # Two conditions. The first is an explicit opt-in, and it is the fix for a
+    # real failure.
     #
-    # A plan needs cloud credentials. Without the WIF secrets configured this
-    # job used to run anyway and fail at the auth step — which made the whole
-    # workflow red on a repository that had simply not opted into Terraform CI
-    # yet, and buried any genuine fmt/validate failure behind noise.
+    # A plan needs cloud credentials. This job used to run on any push, so on a
+    # repository without the WIF secrets it ran anyway and failed at the auth
+    # step — turning the whole workflow red for a repository that had simply not
+    # configured Terraform CI, and burying any genuine fmt/validate failure
+    # behind that noise.
     #
-    # Skipping when the credentials are absent is the honest behaviour: fmt and
-    # validate still gate every push, and plan appears the moment the secrets
-    # exist. `secrets` is readable in a job-level `if`, so this needs no
-    # separate guard job.
+    # The obvious guard, `secrets.GCP_WIF_PROVIDER != ''`, does NOT work: the
+    # `secrets` context is unavailable in a job-level `if`. Only `github`,
+    # `inputs`, `needs` and `vars` are. actionlint catches this; the first
+    # attempt at this fix did not, because it was written and committed in one
+    # step without letting the linter gate the commit.
     #
-    # The second and third conditions exclude fork PRs, which cannot be trusted
-    # with cloud credentials.
+    # So the opt-in is a repository VARIABLE. Set it to "true" once
+    # GCP_WIF_PROVIDER and GCP_TERRAFORM_SA exist:
+    #
+    #   Settings → Secrets and variables → Actions → Variables
+    #   TERRAFORM_PLAN_ENABLED = true
+    #
+    # Until then fmt and validate still gate every push, which is the part that
+    # needs no credentials.
+    #
+    # The second condition excludes fork PRs, which cannot be trusted with them.
     if: >-
-      secrets.GCP_WIF_PROVIDER != '' &&
-      secrets.GCP_TERRAFORM_SA != '' &&
+      vars.TERRAFORM_PLAN_ENABLED == 'true' &&
       (github.event_name == 'push' ||
        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
