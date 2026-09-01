@@ -77,9 +77,13 @@ FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c
 
 ARG VERSION=dev
 ARG REVISION=unknown
+# Passed in rather than hardcoded. `image.source` is the supply-chain link from a
+# running container back to the code that produced it, so baking a placeholder
+# URL into a published image defeats the point of having the label at all.
+ARG SOURCE=https://github.com/unknown/unknown
 LABEL org.opencontainers.image.title="go-sample-app" \
       org.opencontainers.image.description="Sample Go HTTP service delivered to GKE via ArgoCD" \
-      org.opencontainers.image.source="https://github.com/<gh-owner>/<gh-repo>" \
+      org.opencontainers.image.source="${SOURCE}" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.licenses="MIT" \
