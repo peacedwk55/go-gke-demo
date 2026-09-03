@@ -42,6 +42,19 @@ kubeconfig-*
 
 # Plan files are readable archives of the whole configuration and its values.
 *.tfplan
+# `*.tfplan` alone does NOT match a file literally named `tfplan`, which is what
+# `terraform plan -out=tfplan` writes — the name the README and the Terraform CI
+# workflow both use. The pattern looked like it covered the case and did not, so
+# the plan file was committed twice (bac73de, c764cc1).
+#
+# A plan archive is not an innocent artifact: it embeds a FULL tfstate snapshot
+# plus every variable value. In this repository that meant the project id and the
+# operator's home IP, in a public repo. Nothing plaintext-searchable, because the
+# entries are zip-compressed — which is why gitleaks and GitHub secret scanning
+# both stayed quiet. No credential leaked, and that is Workload Identity doing
+# its job: there is no key anywhere to leak.
+tfplan
+tfplan.*
 crash.log
 crash.*.log
 
