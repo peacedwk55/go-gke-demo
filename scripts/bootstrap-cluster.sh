@@ -21,7 +21,11 @@ cd "$(dirname "$0")/.."
 
 DOCKERHUB_USER="${1:-}"
 GH_REPO="${2:-}"
-ARGOCD_VERSION="v2.13.2" # pinned: fetching the moving `stable` manifest is how
+# Pinned, because fetching the moving `stable` manifest is how you end up
+# running a version nobody chose. But a pin is a claim about compatibility, and
+# this one expired: v2.13.2 supports Kubernetes up to 1.31, and GKE's REGULAR
+# channel now serves 1.35. The skew is not cosmetic — see the note in step 5.
+ARGOCD_VERSION="v3.5.2" # pinned: fetching the moving `stable` manifest is how
                          # you end up running a version nobody chose
 
 if [ -z "$DOCKERHUB_USER" ] || [ -z "$GH_REPO" ]; then
@@ -142,9 +146,38 @@ step "5. Install ArgoCD"
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # ArgoCD does not manage its own installation here — that would be circular.
+#
+# -- Why --server-side, and why the version pin has to keep moving -----------
+#
+# Both of these come from the same run, on GKE 1.35 with the previous pin of
+# v2.13.2:
+#
+# 1. Client-side apply cannot install ArgoCD's own ApplicationSet CRD:
+#
+#      The CustomResourceDefinition "applicationsets.argoproj.io" is invalid:
+#      metadata.annotations: Too long: may not be more than 262144 bytes
+#
+#    The last-applied-configuration annotation does not fit. Exactly the same
+#    limit that forces ServerSideApply=true on the kube-prometheus-stack CRDs in
+#    argocd/apps/observability.yaml, so it is the same fix here.
+#
+# 2. A pin is a compatibility claim, and it expires. v2.13.2 supports Kubernetes
+#    to 1.31; GKE REGULAR serves 1.35. ArgoCD's bundled schema did not know
+#    Deployment's `.status.terminatingReplicas` (added in 1.33), so every diff
+#    failed:
+#
+#      ComparisonError: ... error calculating structured merge diff:
+#      error building typed value from live resource: .status.terminatingReplicas
+#
+#    Applications sat at Synced/Degraded on a stale revision and silently stopped
+#    picking up new commits -- GitOps with the pull half broken, reporting green.
+#    Fixed by moving the pin forward, not by disabling the diff.
+#
+# --force-conflicts is required alongside --server-side when taking ownership of
+# fields a previous client-side apply wrote.
 # This is the only `kubectl apply` a human runs against the cluster.
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-kubectl apply -n argocd -f \
+kubectl apply --server-side --force-conflicts -n argocd -f \
     "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml" >/dev/null
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=300s

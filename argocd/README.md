@@ -48,7 +48,7 @@ eval "$(terraform -chdir=../infra/terraform/envs/prod output -raw get_credential
 # 2. install ArgoCD itself — the one imperative step in the whole system
 kubectl create namespace argocd
 kubectl apply -n argocd -f \
-  https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/install.yaml
+  https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.2/manifests/install.yaml
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 
 # 3. hand over control
@@ -57,7 +57,7 @@ kubectl apply -f argocd/apps/
 ```
 
 From step 3 onward, Git drives everything. ArgoCD does not manage its own installation here — that
-would be circular. Note the pinned `v2.13.2` in the URL: fetching the moving `stable` manifest is
+would be circular. Note the pinned `v3.5.2` in the URL: fetching the moving `stable` manifest is
 the standard way to end up with an ArgoCD version nobody chose.
 
 Then get the initial password and reach the UI:

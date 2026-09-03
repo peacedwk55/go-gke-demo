@@ -133,7 +133,7 @@ terraform output image_repository    # -> k8s/overlays/prod/kustomization.yaml
 # 3. install ArgoCD and point it at Git
 eval "$(terraform output -raw get_credentials_command)"
 kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/install.yaml
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.2/manifests/install.yaml
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 
 kubectl -n observability create secret generic grafana-admin \
