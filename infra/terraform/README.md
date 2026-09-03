@@ -151,6 +151,30 @@ terraform plan -var-file=demo.tfvars -out=tfplan
 terraform apply tfplan
 ```
 
+> **`-out=tfplan` writes a file you must never commit.** The archive embeds a full
+> `tfstate` snapshot and every variable value — for this project that means the
+> project id and the operator's home IP. It reached a public repo twice, because
+> `.gitignore` said `*.tfplan`, which does not match a file named `tfplan`.
+> Both `tfplan` and `tfplan.*` are ignored now, and invariant 11 in
+> `scripts/check-invariants.sh` fails the build if any zip containing a `tfstate`
+> entry is tracked, under any filename. Neither gitleaks nor GitHub secret
+> scanning sees it: the zip entries are compressed, so no text search matches.
+
+### On PowerShell, quote every `-flag=value`
+
+PowerShell 7 splits an unquoted `-flag=value` into two arguments, so the value
+arrives as a positional argument and Terraform rejects the whole command:
+
+```powershell
+terraform apply -var-file=demo.tfvars          # Error: Too many command line arguments
+terraform apply "-var-file=demo.tfvars"        # correct
+```
+
+The error message suggests `-chdir`, which sends you looking in the wrong place —
+Terraform saw `demo.tfvars` and assumed you meant a working directory. Verified on
+PowerShell 7.6.5. To avoid the quoting entirely, name the file `terraform.tfvars`
+and Terraform loads it with no flag at all (both names are gitignored).
+
 For a production apply, use `terraform.tfvars.example` instead: larger nodes,
 on-demand rather than Spot, and `deletion_protection = true`.
 
@@ -180,16 +204,27 @@ and so it is obvious which facts have to come from the infrastructure layer.
 ## Teardown — two steps, in this order
 
 ```bash
-terraform apply -var deletion_protection=false   # FIRST
-terraform destroy                                # then
+# production path — `-var-file` is NOT optional here: project_id has no default,
+# so omitting it makes Terraform stop and prompt, which also means it cannot run
+# unattended.
+terraform apply -var-file=terraform.tfvars -var deletion_protection=false   # FIRST
+terraform destroy -var-file=terraform.tfvars                                # then
 ```
 
 `deletion_protection` is stored in **state**, not read from the CLI invocation, so `terraform
 destroy` alone fails with `Cannot destroy cluster because deletion_protection is set to true`. It is
 a variable rather than a hardcoded `true` precisely so this path exists.
 
-`demo.tfvars` sets it `false` from the start, so a demo teardown is one step. That is only
-acceptable because the demo cluster is disposable.
+`demo.tfvars` sets it `false` from the start, so **a demo teardown is a single command**:
+
+```powershell
+terraform destroy "-var-file=demo.tfvars"
+```
+
+Do not run the two-step sequence on the demo path — the first `apply` would spend
+several minutes reconciling a cluster you are about to delete, changing nothing.
+That is only acceptable because the demo cluster is disposable; a production
+cluster keeps `deletion_protection = true` and therefore keeps the two steps.
 
 ### After destroy — verify, do not assume
 
