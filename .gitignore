@@ -58,6 +58,16 @@ tfplan.*
 crash.log
 crash.*.log
 
+# Any captured Terraform output, e.g. `| Tee-Object -FilePath apply.log` so a
+# silent failure leaves evidence. Useful locally, never a repository artifact.
+#
+# This entry exists because apply.log was committed to a public repo twice inside
+# an hour, both times by `git add -A`, the second time in the very commit that
+# claimed to be removing it. A guard checking `'*.log' not in gitignore` passed
+# over `crash.*.log` above and silently skipped the edit — a substring test
+# colliding with unrelated content.
+*.log
+
 # .terraform.lock.hcl IS committed on purpose (note the negation): it pins
 # provider versions and checksums, which is what makes builds reproducible.
 !.terraform.lock.hcl
