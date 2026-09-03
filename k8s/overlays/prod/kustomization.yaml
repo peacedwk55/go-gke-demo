@@ -24,7 +24,7 @@ resources:
 images:
 - name: go-sample-app
   newName: asia-southeast1-docker.pkg.dev/project-e51d5588-43e5-49a9-813/dockerhub-remote/dockerpeace/go-sample-app
-  newTag: sha-104b0df
+  newTag: sha-f556ab2
 
 # ── Config ───────────────────────────────────────────────────────────────────
 # Hash suffix left ON (the default). The generated name changes whenever
