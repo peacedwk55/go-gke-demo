@@ -15,6 +15,28 @@
 controller:
   type: daemonset
 
+  volumes:
+    # Alloy writes its WAL and remotecfg state under `alloy.storagePath`, which
+    # defaults to /tmp/alloy. With readOnlyRootFilesystem: true below and no
+    # writable /tmp, it cannot even create that directory and dies at startup:
+    #
+    #   Error: failed to create the remotecfg service: mkdir /tmp/alloy:
+    #   read-only file system
+    #
+    # CrashLoopBackOff on every node of the DaemonSet, so no logs reach Loki at
+    # all — while ArgoCD reports the Application as Synced, because the manifests
+    # applied perfectly.
+    #
+    # An emptyDir keeps the read-only root (the security posture is the point)
+    # and gives Alloy the one writable path it needs. Same pattern and same
+    # reason as the app's own /tmp mount in k8s/base/deployment.yaml. Ephemeral
+    # is correct here: the WAL is a buffer for logs in flight, not a store, and
+    # the chart's own comment says data is lost between reboots regardless.
+    extra:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+
 alloy:
   # Needed to read container logs from the host and to discover pods.
   clustering:
@@ -22,6 +44,9 @@ alloy:
 
   mounts:
     varlog: true
+    extra:
+      - name: tmp
+        mountPath: /tmp
 
   resources:
     requests:
