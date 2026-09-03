@@ -221,6 +221,24 @@ grafana:
     datasources:
       enabled: true
       searchNamespace: ALL
+      # The chart creates its OWN Prometheus datasource and marks it default.
+      # Ours above is also marked default, and Grafana refuses to start on that:
+      #
+      #   Datasource provisioning error: datasource.yaml config is invalid.
+      #   Only one datasource per organization can be marked as default
+      #
+      # It is a hard failure, not a warning — CrashLoopBackOff with the whole
+      # observability story dark, on a stack that ArgoCD had already reported as
+      # Synced.
+      #
+      # Disabling the chart's copy is the right way round rather than dropping
+      # `isDefault` from ours. The chart's auto-generated datasource is a bare
+      # Prometheus URL. Ours carries the entire correlation layer:
+      # exemplarTraceIdDestinations (metrics -> traces), derivedFields
+      # (logs -> traces), tracesToLogsV2 and tracesToMetrics. Letting the bare
+      # one win the default slot would leave the default datasource with none of
+      # it, and every "why doesn't the exemplar link work" hour after that.
+      defaultDatasourceEnabled: false
 
   grafana.ini:
     analytics:
