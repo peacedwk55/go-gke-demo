@@ -191,30 +191,51 @@ resource "google_container_node_pool" "primary" {
   location = var.region
   cluster  = google_container_cluster.primary.name
 
-  # PER ZONE, not in total. The cluster is regional, so this is 1-3 nodes in
-  # each of three zones: a floor of 3 and a ceiling of 9.
+  # Unset because autoscaling owns the count. `initial_node_count` below is what
+  # decides the size at creation.
   node_count = null
 
-  # TOTAL node counts, not per-zone — and that choice was forced by observation.
+  # ── Why a three-node floor needs BOTH of the settings below ────────────────
   #
-  # `min_node_count` / `max_node_count` are documented as per-zone for a regional
-  # cluster, so min=1 across three zones should have produced a floor of three
-  # nodes. The first apply produced exactly ONE node, in asia-southeast1-c, and
-  # it stayed there: not a slow scale-up, a stable state at 1.
+  # This block has now been wrong twice, in two different ways, and both times
+  # the symptom was the same: a regional cluster running ONE node.
   #
-  # That matters well beyond node arithmetic. One node in one zone means the
+  # Attempt 1 used per-zone `min_node_count = 1`. Documented as per-zone, so
+  # three zones should give three nodes. The apply produced one node in
+  # asia-southeast1-c.
+  #
+  # Attempt 2 replaced that with `total_min_node_count = 3`, and an earlier
+  # version of this comment claimed the problem was solved. It was not. The next
+  # real apply produced one node again — asia-southeast1-b this time, sizes 0/1/0
+  # across the three zones, stable for over six minutes with nothing pending.
+  # `initial_node_count` sat at 0 in state.
+  #
+  # The actual mechanism, which neither attempt addressed:
+  #
+  #   total_min_node_count is a floor the autoscaler will not scale BELOW.
+  #   It is not a target it scales UP to. On an idle cluster nothing is
+  #   unschedulable, so the autoscaler has no reason to act, and the pool stays
+  #   at whatever size it was created with.
+  #
+  # So the floor is set by creation size, not by the autoscaler:
+  #   initial_node_count   = 1 PER ZONE -> 3 nodes at creation
+  #   total_min_node_count = 3          -> the autoscaler may not go below that
+  #   location_policy      = BALANCED   -> spreads them one per zone
+  #
+  # ⚠️ Changing `initial_node_count` on an existing pool FORCES REPLACEMENT
+  # (verified: `terraform plan` reports "1 to add, 1 to destroy"). Apply it to a
+  # fresh cluster. On a running one it destroys every node and every pod on them,
+  # so a live LGTM stack is not the moment.
+  #
+  # Why this matters more than node arithmetic: one node in one zone means the
   # topologySpreadConstraints on topology.kubernetes.io/zone in
-  # k8s/base/deployment.yaml have nothing to spread across, the pod
-  # anti-affinity has nothing to separate onto, and the LGTM stack of Task 6
-  # does not fit in a single e2-standard-2. Three of the assignment's claims
-  # quietly stop being true.
-  #
-  # `total_*` states the intent directly instead of relying on an
-  # interpretation that did not hold, so the floor is 3 nodes because the
-  # configuration says 3 — not because three zones each contribute one.
-  #
-  # location_policy = BALANCED is what then distributes those 3 across the
-  # zones rather than stacking them in one.
+  # k8s/base/deployment.yaml have nothing to spread across, the pod anti-affinity
+  # has nothing to separate onto, and the LGTM stack of Task 6 does not fit in a
+  # single e2-standard-2 (1930m allocatable CPU against ~2050m of requests).
+  # Three of the assignment's claims quietly stop being true, and every manifest
+  # still validates.
+  initial_node_count = 1
+
   autoscaling {
     total_min_node_count = var.min_nodes_total
     total_max_node_count = var.max_nodes_total
