@@ -20,19 +20,10 @@ distributor:
     log_received_spans:
       enabled: false # one log line per span would swamp Loki
 
-  # OTLP only. Jaeger and Zipkin receivers are deliberately not enabled: the app
-  # speaks OTLP (see app/telemetry.go), and an open receiver nobody uses is
-  # attack surface plus a port to explain.
-  #
-  # The app's OTEL_EXPORTER_OTLP_ENDPOINT in k8s/overlays/prod/config.env points
-  # at :4318 (HTTP) on this service.
-  receivers:
-    otlp:
-      protocols:
-        http:
-          endpoint: 0.0.0.0:4318
-        grpc:
-          endpoint: 0.0.0.0:4317
+  # NOTE: receivers are NOT configured here. See the top-level `traces:` block —
+  # `distributor.receivers` is not a key this chart has, and Helm ignores unknown
+  # values silently, so putting them here disables trace ingestion entirely
+  # without any error. Proven by rendering: `otlp` appeared zero times.
 
   resources:
     requests:
@@ -126,6 +117,27 @@ metricsGenerator:
 # ─────────────────────────────────────────────────────────────────────────────
 # Storage
 # ─────────────────────────────────────────────────────────────────────────────
+# ── Trace ingestion ────────────────────────────────────────────────────────
+#
+# This is the chart's own key for receivers, and the ONLY place they take effect.
+# An earlier version of this file set them under `distributor.receivers`, which
+# reads naturally and does nothing: the chart has no such key, Helm drops unknown
+# values without complaint, and Tempo comes up with no receiver at all. The app
+# then exports OTLP into nothing and the symptom — "no traces in Tempo" — points
+# at the app or the network rather than at this file.
+#
+# OTLP only. Jaeger, Zipkin and OpenCensus stay off: the app speaks OTLP (see
+# app/telemetry.go), and a receiver nobody uses is attack surface plus a port to
+# explain. Enabling a protocol here makes the chart both add the receiver to
+# Tempo's config and publish the port on the distributor Service — which is why
+# the app's OTEL_EXPORTER_OTLP_ENDPOINT can name it.
+traces:
+  otlp:
+    http:
+      enabled: true # :4318 — what k8s/overlays/prod/config.env points at
+    grpc:
+      enabled: true # :4317 — kept for any future gRPC exporter
+
 storage:
   trace:
     # Local filesystem backend. GCS is the production answer for the same
