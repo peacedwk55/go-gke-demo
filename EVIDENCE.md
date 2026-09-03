@@ -264,6 +264,19 @@ they are abandoned because the component responsible for deleting them was
 deleted first. Deleting the observability Applications and their PVCs *before*
 destroy prevents it entirely — that sequence is now in the README.
 
+The five disks have since been deleted, each confirmed at `users=0` and
+identified by the `description` naming its source PVC. Nothing of value was in
+them: the dashboards are JSON in `observability/dashboards/`, the alert rules are
+YAML in `observability/alerts/`, Grafana runs with `allowUiUpdates: false` so UI
+edits are discarded by design anyway, and the metrics, logs and traces were about
+two hours of the synthetic curl traffic used above — already distilled into this
+document.
+
+Final sweep of the project: zero clusters, instances, disks, snapshots, static
+addresses, Cloud NAT routers, forwarding rules and Artifact Registry
+repositories; only Google's auto-created `default` VPC and the 628-byte tfstate
+bucket remain. Billing is effectively zero.
+
 ### Still outstanding
 
 - `initial_node_count = 1` is committed but **not applied**: changing it forces
