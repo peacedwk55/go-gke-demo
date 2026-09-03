@@ -244,16 +244,51 @@ gcloud compute routers list
 gcloud artifacts repositories list
 ```
 
-**Step 2 is the one that costs money after you think you are done.** The LGTM stack's PVCs are
-created by Kubernetes, not by Terraform, so `terraform destroy` has no knowledge of them. With a
-`Retain` reclaim policy — or if the PVC outlives the cluster deletion — 115 GB of `pd-balanced` sits
-there billing roughly **$14/month** for nothing, and nothing in the Terraform output hints at it.
+**Step 2 is the one that costs money after you think you are done**, and it happened exactly as
+predicted on the first real teardown: five orphaned disks, 115 GB of `pd-balanced`, about
+**$11.50/month** for nothing, with no hint of them anywhere in the Terraform output.
 
-Delete what step 2 lists, once you have confirmed the names are the demo's:
+The mechanism is worth stating precisely, because the earlier version of this note guessed at it.
+`standard-rwo` uses `reclaimPolicy: Delete`, so deleting a PVC *does* delete its disk — the CSI
+controller does that. But `terraform destroy` deletes the whole cluster at once, and the CSI
+controller goes with it before it can process anything. The disks are not retained by policy; they
+are abandoned because the component responsible for reclaiming them was deleted first.
+
+Which means the leak is preventable, and the prevention belongs *before* destroy:
+
+```bash
+# Let the CSI controller reclaim the disks while it still exists.
+# Deleting the Applications with prune removes the StatefulSets AND their PVCs.
+kubectl -n argocd delete application loki tempo kube-prometheus-stack alloy
+kubectl -n observability delete pvc --all
+kubectl -n observability get pvc          # wait until empty
+gcloud compute disks list --filter="-users:*"   # expect nothing
+
+# only then
+terraform destroy -var-file=demo.tfvars
+```
+
+Skip that and you clean up afterwards instead. The disks carry a `description` naming the PVC they
+came from, so they can be identified with confidence rather than deleted on faith:
+
+```bash
+gcloud compute disks list --format="value(name,zone.basename(),sizeGb,description)"
+#   pvc-b706c2f2...  a  50  ...prometheus-kube-prometheus-stack-prometheus-0...
+#   pvc-cd90687e...  b  30  ...storage-loki-0...
+#   pvc-a64841a2...  b  20  ...data-tempo-ingester-0...
+#   pvc-eada2721...  b  10  ...kube-prometheus-stack-grafana...
+#   pvc-65eb9c52...  b   5  ...alertmanager-...-alertmanager-0...
+```
+
+Then delete them. Confirm the names first — this is irreversible, and a `pvc-` prefix alone is not
+proof that a disk belongs to *this* demo:
 
 ```bash
 gcloud compute disks delete <name> --zone=<zone>
 ```
+
+Check for snapshots before deleting if the project has ever had any; a snapshot does not block the
+delete, but it does mean someone wanted the data.
 
 The GCS state bucket is worth keeping between sessions (it costs a few cents and holds the history);
 remove it only when finished with the project entirely.

@@ -234,6 +234,36 @@ Number 6 is the one worth remembering. A path assembled from labels that all
 exist, syntactically valid, unevaluatable by any linter, uncontradicted by a
 healthy pod — and the symptom appears three systems away as an empty log panel.
 
+### Teardown left five disks behind, as predicted
+
+`terraform destroy` removed everything it owned — the custom VPC (only `default`
+remains), Cloud NAT router, external addresses, the Artifact Registry repository
+and the custom service accounts all gone, with only the tfstate bucket kept
+deliberately.
+
+What survived was 115 GB of `pd-balanced` in five orphaned disks:
+
+| disk | GB | zone | created for |
+|---|---|---|---|
+| `pvc-b706c2f2…` | 50 | a | Prometheus |
+| `pvc-cd90687e…` | 30 | b | Loki |
+| `pvc-a64841a2…` | 20 | b | Tempo ingester |
+| `pvc-eada2721…` | 10 | b | Grafana |
+| `pvc-65eb9c52…` | 5 | b | Alertmanager |
+
+Exactly the 115 GB computed during pre-flight, and exactly what
+`infra/terraform/README.md` warned would happen — so the warning was right and
+the procedure was still incomplete, because it said how to *find* them and not
+how to *avoid* them.
+
+The mechanism, now measured rather than guessed: `standard-rwo` uses
+`reclaimPolicy: Delete`, so deleting a PVC does delete its disk. But
+`terraform destroy` removes the whole cluster at once, taking the CSI controller
+with it before it can reclaim anything. The disks are not retained by policy;
+they are abandoned because the component responsible for deleting them was
+deleted first. Deleting the observability Applications and their PVCs *before*
+destroy prevents it entirely — that sequence is now in the README.
+
 ### Still outstanding
 
 - `initial_node_count = 1` is committed but **not applied**: changing it forces
