@@ -330,6 +330,30 @@ kubeEtcd:
 kubeProxy:
   enabled: false
 
+# coreDns is the chart's ONE remaining default that targets kube-system, and it
+# is the reason five Applications failed to sync on the first real cluster.
+#
+# The chart enables it by default and renders `Service/kube-prometheus-stack-
+# coredns` in kube-system. The observability AppProject permits exactly one
+# destination namespace — observability — so ArgoCD rejected that single Service,
+# marked the whole sync "one or more synchronization tasks are not valid", and
+# therefore never applied the Prometheus Operator CRDs. Every app that ships a
+# ServiceMonitor or PrometheusRule then failed too: tempo, alloy,
+# observability-config, and the application itself. One Service in the wrong
+# namespace, five red Applications, and no error message naming DNS anywhere.
+#
+# Disabling it is the correct fix rather than widening the AppProject, and not
+# only because least privilege is the point of the AppProject: this cluster runs
+# kube-dns, not CoreDNS — verified with `kubectl get deploy -n kube-system`,
+# which shows kube-dns and kube-dns-autoscaler. Scraping CoreDNS here would give
+# a permanently-down target, exactly what the four components above are disabled
+# to avoid.
+#
+# kubeDns is left off too (it is the chart's default): it would put another
+# Service in kube-system, and GKE surfaces DNS metrics through Cloud Monitoring.
+coreDns:
+  enabled: false
+
 defaultRules:
   create: true
   rules:
