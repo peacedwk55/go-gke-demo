@@ -107,8 +107,35 @@ alloy:
           source_labels = ["__meta_kubernetes_pod_name"]
           target_label  = "__pod__"
         }
+        // The log file path, and the one rule that has to match the node's real
+        // layout rather than a plausible reading of it.
+        //
+        // The directory is named `<namespace>_<podname>_<uid>` — underscores,
+        // and the pod UID — with one subdirectory per container. Verified on the
+        // node, not from documentation:
+        //
+        //   /var/log/pods/prod_go-sample-app-8d9cff75b-8dnc2_08da2db2-.../app/0.log
+        //
+        // An earlier version joined namespace/podname/container with "/" and
+        // produced `/var/log/pods/*prod/go-sample-app-xxx/app/*.log`, which
+        // matches nothing:
+        //
+        //   ls: cannot access '/var/log/pods/*prod/go-sample-app-.../app/*.log':
+        //       No such file or directory
+        //
+        // Zero files, so zero logs, so Loki held no labels at all — while Alloy
+        // ran 2/2 on every node with no errors in its own output and ArgoCD
+        // reported the Application Synced/Healthy. Nothing anywhere was red. The
+        // only way to see it was to ask Loki what labels it had and get nothing
+        // back.
+        //
+        // `$1` is capture group 1 of the (default `(.*)`) regex applied to the
+        // joined source labels, so uid/container gives
+        // `/var/log/pods/*<uid>/<container>/*.log` — the leading `*` absorbs the
+        // `<namespace>_<podname>_` prefix. This is the canonical Promtail/Alloy
+        // form, and it now matches a real file.
         rule {
-          source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"]
+          source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
           separator     = "/"
           action        = "replace"
           target_label  = "__path__"
