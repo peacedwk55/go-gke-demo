@@ -435,7 +435,7 @@ footer {
 
   <figure>
     <div class="canvas">
-      <svg viewBox="0 0 940 300" role="img"
+      <svg viewBox="0 0 940 326" role="img"
            aria-label="ไทม์ไลน์ลำดับปิด pod: เมื่อได้รับ SIGTERM ที่เวลา 0 วินาที readyz เปลี่ยนเป็น 503 ทันที แต่ listener ยังเปิดรับ connection ต่อไปอีก 5 วินาที เพื่อให้ EndpointSlice อัปเดต จากนั้นจึงปิด listener และ drain request ที่ค้าง">
         <defs>
           <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -484,9 +484,11 @@ footer {
         <text class="s-hotlab" x="450" y="214" text-anchor="middle">5 วินาที — รอ EndpointSlice ถอด pod ออกจาก Service</text>
 
         <!-- ผลวัด -->
-        <text class="s-lab" x="24" y="288">วัดจาก rolling update จริงบนคลัสเตอร์:</text>
-        <text class="s-tm" x="300" y="288" fill="var(--copper)">รอ 1 วินาที → หลุด 15 จาก 10,486</text>
-        <text class="s-tm" x="620" y="288" fill="var(--verdigris)">รอ 5 วินาที → หลุด 0 จาก 8,017</text>
+        <text class="s-lab" x="24" y="282">วัดจาก rolling update จริง — ทดลองเทียบบน kind:</text>
+        <text class="s-tm" x="360" y="282" fill="var(--copper)">รอ 1 วินาที → หลุด 15 จาก 10,486</text>
+        <text class="s-tm" x="660" y="282" fill="var(--verdigris)">รอ 5 วินาที → หลุด 0 จาก 8,017</text>
+        <text class="s-lab" x="24" y="306">ยืนยันซ้ำบน GKE จริง ตอน rollback ด้วย git revert:</text>
+        <text class="s-tm" x="360" y="306" fill="var(--verdigris)">หลุด 0 จาก 13,437</text>
       </svg>
     </div>
     <figcaption>
@@ -686,10 +688,11 @@ footer {
 <!-- ══════════════════════════════ 6 ══════════════════════════════ -->
 <section>
   <div class="num">ภาพที่ 6</div>
-  <h2>อะไรพิสูจน์แล้ว อะไรยัง</h2>
+  <h2>ทุกข้อพิสูจน์แล้ว และเพราะอะไรจึงต้องพิสูจน์</h2>
   <p class="say">
-    แยก <b>เขียนเสร็จ</b> ออกจาก <b>รันแล้ว</b> — เพราะบั๊กเกือบทุกตัวที่เจอในโปรเจกต์นี้
-    ผ่านการอ่านโค้ดมาได้สบาย ๆ และถูกจับได้ตอนเอาไปรัน
+    ตารางนี้เคยแยก <b>เขียนเสร็จ</b> ออกจาก <b>รันแล้ว</b> เพราะสองอย่างนั้นไม่เหมือนกัน —
+    บั๊กเกือบทุกตัวในโปรเจกต์นี้ผ่าน linter ทุกตัวมาได้ และสี่ตัวยังถูก ArgoCD
+    รายงานว่า <b>Synced</b> ด้วย ตอนนี้ไม่เหลือช่องว่างนั้นแล้ว
   </p>
 
   <div class="tasks">
