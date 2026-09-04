@@ -298,16 +298,15 @@ fi
 #
 # `terraform plan -out=tfplan` writes an archive that embeds a FULL tfstate
 # snapshot and every variable value. Committing one publishes infrastructure
-# detail that never belonged in Git — here the project id and the operator's
-# home IP, in a public repository.
+# detail that never belonged in Git.
 #
-# It happened twice (bac73de, c764cc1). .gitignore said `*.tfplan`, which does
-# not match a file literally named `tfplan` — the name the README and the
-# Terraform workflow both use. The rule looked like it covered the case.
+# It happened twice here. .gitignore said `*.tfplan`, which does not match a file
+# literally named `tfplan` — the name the README and the Terraform workflow both
+# use. The rule looked like it covered the case.
 #
 # Two reasons nothing caught it:
-#   - the zip entries are compressed, so the IP is not plaintext-searchable;
-#     gitleaks and GitHub secret scanning both stayed quiet
+#   - the zip entries are compressed, so the contents are not
+#     plaintext-searchable; gitleaks and GitHub secret scanning both stayed quiet
 #   - a check on the FILENAME would have repeated the .gitignore mistake
 #
 # So this looks INSIDE tracked files: a zip whose entries include `tfstate` is a
