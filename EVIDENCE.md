@@ -214,6 +214,112 @@ there is no key file anywhere in the repository, the cluster or the state.
 
 ---
 
+## Second session — the claims that were configured but never observed
+
+Everything above came from the first cluster. Three things were still asserted
+rather than seen, and a second cluster settled all three. It reached six healthy
+Applications on the first attempt, with no fixes needed along the way, because
+the seven defects had already been found.
+
+### `initial_node_count = 1` gives three nodes, one per zone
+
+The first cluster ran on one node and the repository's explanation of why had
+been wrong twice. The fix was committed but never applied, because applying it
+forces node pool replacement.
+
+```
+$ gcloud compute instances list
+gke-...-hwdx   asia-southeast1-a   e2-standard-2   RUNNING
+gke-...-l239   asia-southeast1-b   e2-standard-2   RUNNING
+gke-...-fb69   asia-southeast1-c   e2-standard-2   RUNNING
+
+$ gcloud container node-pools list ...
+go-sample-app-prod-pool   e2-standard-2   initialNodeCount 1   min 3   max 9
+```
+
+One per zone from creation, against `0/1/0` before. `initial_node_count` is
+per-zone on a regional cluster; `total_min_node_count` is a floor the autoscaler
+will not go below, not a target it scales up to.
+
+There is a trap in watching this happen. Partway through the apply,
+`gcloud compute instances list` shows three `e2-medium` nodes named
+`default-pool`. Those are GKE's own default pool, created and then deleted by
+`remove_default_node_pool`, and reading them as success once made a broken run
+look finished.
+
+### ArgoCD v3.5.2 installed from the pin, and synced clean
+
+No mid-session upgrade this time: the version bump was already in
+`scripts/bootstrap-cluster.sh`, so the Kubernetes 1.35 schema gap never appeared
+and no Application sat on a stale revision.
+
+### Grafana provisioned the dashboards
+
+Valid JSON is not the same as loaded, so it was queried from Grafana's own API:
+
+```
+$ curl -u admin:… localhost:3000/api/search?type=dash-db
+  app-red          App — RED (Rate, Errors, Duration)
+  cluster-health   Cluster & node health
+  logs-traces      Logs & traces — correlation
+
+$ curl -u admin:… localhost:3000/api/datasources
+  Prometheus  uid=prometheus  default=True   http://kube-prometheus-stack-prometheus…:9090
+  Loki        uid=loki        default=False  http://loki-gateway…:80
+  Tempo       uid=tempo       default=False  http://tempo-query-frontend…:3100
+```
+
+Three dashboards under the uids the panels reference, and exactly one default
+datasource — the collision that had put Grafana in CrashLoopBackOff.
+
+### The correlation chain, clicked rather than curled
+
+Earlier it was proven through the APIs. This time it was followed in Grafana:
+expanding a log line in the `logs-traces` dashboard and clicking **View trace**
+opened Explore against Tempo with the trace id already filled in — lifted out of
+the log text by the Loki datasource's derived-field regex, not typed — and Tempo
+returned the span: `go-sample-app: GET /healthz`, 193.25µs, GET 200, one span.
+
+### Rollback is `git revert`, and it costs nothing
+
+The README claims rollback uses the same path as deployment. Tested:
+
+```
+$ git revert --no-edit 148be41     # the image bump commit
+$ git push
+```
+
+No kubectl, no ArgoCD CLI, no button. The manifest went from `sha-e22d2c0` back
+to `sha-823cc02` and ArgoCD did the rest:
+
+```
+t+20s  ready=2/2  argocd=Synced/Healthy  images: 2× sha-823cc02 + 1× sha-e22d2c0
+t+40s  ready=2/2  argocd=Synced/Healthy  images: 2× sha-823cc02
+```
+
+Three pods briefly — `maxSurge: 1` building the replacement before removing the
+old one — and `ready` never below 2, which is `maxUnavailable: 0` doing its job.
+
+A probe hammered the Service throughout, counting anything that was not a 200:
+
+```
+RESULT ok=13437 bad=0
+```
+
+**13,437 requests across the rollback, none dropped.** Zero downtime had been
+measured on kind (0 of 8,017); this is the same result on a regional GKE cluster
+with the pods on different nodes in different zones.
+
+### One panel reading "No data" is the panel being right
+
+`Errors — 5xx ratio` showed nothing throughout. Its query is
+`code=~"5.."`, and the load generator's deliberate failures were 404s. A 4xx is
+a client asking for something that does not exist; RED's E is server failure. The
+empty panel is an accurate statement that the service never failed — and a
+reminder that "the graph is empty" and "the graph is broken" look identical.
+
+---
+
 ## What this run found that no linter could
 
 Seven defects, on manifests that passed `yamllint`, `kubeconform`,
