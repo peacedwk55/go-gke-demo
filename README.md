@@ -72,6 +72,9 @@ attacker gets the ability to make a reviewable, revertible commit — not cluste
 | [observability/](observability/) | 6 | LGTM Helm values, 3 dashboards, alert rules |
 | [.github/workflows/](.github/workflows/) | 7 | CI, and Terraform plan-on-PR |
 | [ansible/](ansible/) | 8 | 4 roles: common, docker, nginx_container, node_exporter |
+| [scripts/](scripts/) | — | Repository invariants, cluster bootstrap, port-forward every UI |
+| [EVIDENCE.md](EVIDENCE.md) | — | What the live clusters actually proved, with the commands that produced it |
+| [RUNBOOK.md](RUNBOOK.md) | — | Bring the demo up, look at it, tear it down — in the order that works |
 
 Every directory has its own `README.md` covering the decisions specific to it. This file covers what
 spans them.
@@ -326,7 +329,7 @@ Everything below was executed, not asserted.
 | `kubectl apply --dry-run=server` | all accepted |
 | `kustomize edit set image` | rewrites one line; output byte-identical, selectors untouched |
 
-### On a live cluster
+### On a local `kind` cluster
 
 | Check | Result |
 |---|---|
@@ -337,6 +340,27 @@ Everything below was executed, not asserted.
 | ConfigMap plumbing | `GREETING` from `config.env` appeared in the response body |
 | `restricted` PSS | rejected an ad-hoc `kubectl run` pod; app pods admitted cleanly |
 | Rolling update under load | **8,017 requests, 0 failures** |
+
+### On real GKE
+
+The things a local cluster cannot show. Full detail, with the commands, in
+[EVIDENCE.md](EVIDENCE.md).
+
+| Check | Result |
+|---|---|
+| Node pool | 3 × `e2-standard-2`, one per zone (`a`/`b`/`c`), default pool removed |
+| Node allocatable | 1930m CPU / 5.88 GiB — measured, and what the LGTM sizing rests on |
+| Image pull path | via Artifact Registry remote repo on private nodes, not Docker Hub |
+| Workload Identity | `GKE_METADATA` on the pool; no key file anywhere |
+| Dataplane V2 | `ADVANCED_DATAPATH` |
+| Pod placement | two pods, two nodes, two zones |
+| ArgoCD | 6 Applications `Synced/Healthy`, second cluster clean on first attempt |
+| `ignoreDifferences` on `/spec/replicas` | scaled to 4 by hand — never reverted, never `OutOfSync`; the HPA walked it back |
+| **Rollback by `git revert`** | manifest moved back one tag, ArgoCD did the rest — no kubectl, no CLI |
+| **Rolling update under load** | **13,437 requests, 0 failures** |
+| Correlation, one `trace_id` | present as a Prometheus exemplar, a Tempo span, and a Loki log line |
+| Grafana provisioning | 3 dashboards loaded under the uids the panels reference; exactly one default datasource |
+| Teardown | 0 clusters, 0 instances, 0 disks — PVCs deleted before `destroy`, so nothing leaked |
 
 ### Infrastructure
 
@@ -354,12 +378,12 @@ Everything below was executed, not asserted.
 | `hadolint` (Dockerfile) | 0 findings |
 | `ansible-lint` | 0 failures, 0 warnings — meets the **production** profile |
 | `ansible-playbook --syntax-check` | passes |
-| `yamllint` (47 files) | 0 findings |
+| `yamllint` (48 files) | 0 findings |
 | `actionlint` (workflows) | 0 findings |
 | `shellcheck` (`scripts/`) | 0 findings |
 | `gitleaks` (working tree + history) | no leaks found |
 | `trivy config` on **rendered** manifests | 0 HIGH / 0 CRITICAL — 41 of 42 policies pass |
-| `./scripts/check-invariants.sh` | 7/7 hold |
+| `./scripts/check-invariants.sh` | 11/11 hold |
 
 > `trivy config` must run on **rendered** output, not the source tree. Against `k8s/` directly it
 > reads `overlays/*/patches/*.yaml` as complete Deployments — they are strategic-merge fragments, so
@@ -369,7 +393,7 @@ Everything below was executed, not asserted.
 ### Reproduce it all
 
 ```bash
-./scripts/check-invariants.sh      # the 7 repository invariants, locally
+./scripts/check-invariants.sh      # the 11 repository invariants, locally
 ```
 
 Every tool above runs in a container, so none of it requires a local install beyond Docker — see

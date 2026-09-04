@@ -241,58 +241,6 @@ else
     fi
 fi
 
-# ── 11. No Terraform plan archive is tracked ────────────────────────────────
-#
-# `terraform plan -out=tfplan` writes an archive that embeds a FULL tfstate
-# snapshot and every variable value. Committing one publishes infrastructure
-# detail that never belonged in Git — here the project id and the operator's
-# home IP, in a public repository.
-#
-# It happened twice (bac73de, c764cc1). .gitignore said `*.tfplan`, which does
-# not match a file literally named `tfplan` — the name the README and the
-# Terraform workflow both use. The rule looked like it covered the case.
-#
-# Two reasons nothing caught it:
-#   - the zip entries are compressed, so the IP is not plaintext-searchable;
-#     gitleaks and GitHub secret scanning both stayed quiet
-#   - a check on the FILENAME would have repeated the .gitignore mistake
-#
-# So this looks INSIDE tracked files: a zip whose entries include `tfstate` is a
-# plan archive whatever it is called.
-#
-# Worth stating plainly: no credential leaked, and that is not luck. Workload
-# Identity means no service-account key exists anywhere to be captured in state.
-# Invariant 2 enforces that; this one limits the blast radius when state does
-# escape.
-# ── How this is detected, and why not with Python ───────────────────────────
-#
-# The first version shelled out to a Python one-liner using zipfile. It reported
-# PASS on a tracked plan archive — because `python3` on the author's machine is
-# the Microsoft Store App Execution Alias stub, which is not an interpreter: it
-# prints a message and exits 49. `command -v python3` finds it, so it was chosen,
-# every invocation failed, and `2>/dev/null` swallowed the evidence.
-#
-# That is the same mistake as invariant 9's first version wearing a different
-# costume: a broken tool reported as a clean result. A check that cannot run must
-# say so, never pass.
-#
-# The fix removes the dependency instead of guarding it. A zip stores entry NAMES
-# uncompressed, in both the local headers and the central directory, so a plain
-# grep over the raw bytes finds them — no interpreter, nothing to be missing.
-# `head -c2` = "PK" gates it to actual archives first.
-#
-# This errs toward flagging: a PK-prefixed file containing the literal text
-# `tfstate` trips it even if it is not a plan. That is the right direction for a
-# check whose miss published a state snapshot.
-planfiles=""
-while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    [ "$(head -c2 "$f" 2>/dev/null)" = "PK" ] || continue
-    grep -qa 'tfstate' "$f" 2>/dev/null && planfiles="${planfiles}${planfiles:+$'
-'}$f"
-done < <(git ls-files)
-check "no Terraform plan archive is tracked" "$planfiles"
-
 # ── 10. No accidental CI skip token in the commits about to be pushed ───────
 #
 # GitHub scans the ENTIRE commit message for the CI skip tokens, body as well as
@@ -345,6 +293,58 @@ else
         pass "no accidental skip token in unpushed commits"
     fi
 fi
+
+# ── 11. No Terraform plan archive is tracked ────────────────────────────────
+#
+# `terraform plan -out=tfplan` writes an archive that embeds a FULL tfstate
+# snapshot and every variable value. Committing one publishes infrastructure
+# detail that never belonged in Git — here the project id and the operator's
+# home IP, in a public repository.
+#
+# It happened twice (bac73de, c764cc1). .gitignore said `*.tfplan`, which does
+# not match a file literally named `tfplan` — the name the README and the
+# Terraform workflow both use. The rule looked like it covered the case.
+#
+# Two reasons nothing caught it:
+#   - the zip entries are compressed, so the IP is not plaintext-searchable;
+#     gitleaks and GitHub secret scanning both stayed quiet
+#   - a check on the FILENAME would have repeated the .gitignore mistake
+#
+# So this looks INSIDE tracked files: a zip whose entries include `tfstate` is a
+# plan archive whatever it is called.
+#
+# Worth stating plainly: no credential leaked, and that is not luck. Workload
+# Identity means no service-account key exists anywhere to be captured in state.
+# Invariant 2 enforces that; this one limits the blast radius when state does
+# escape.
+# ── How this is detected, and why not with Python ───────────────────────────
+#
+# The first version shelled out to a Python one-liner using zipfile. It reported
+# PASS on a tracked plan archive — because `python3` on the author's machine is
+# the Microsoft Store App Execution Alias stub, which is not an interpreter: it
+# prints a message and exits 49. `command -v python3` finds it, so it was chosen,
+# every invocation failed, and `2>/dev/null` swallowed the evidence.
+#
+# That is the same mistake as invariant 9's first version wearing a different
+# costume: a broken tool reported as a clean result. A check that cannot run must
+# say so, never pass.
+#
+# The fix removes the dependency instead of guarding it. A zip stores entry NAMES
+# uncompressed, in both the local headers and the central directory, so a plain
+# grep over the raw bytes finds them — no interpreter, nothing to be missing.
+# `head -c2` = "PK" gates it to actual archives first.
+#
+# This errs toward flagging: a PK-prefixed file containing the literal text
+# `tfstate` trips it even if it is not a plan. That is the right direction for a
+# check whose miss published a state snapshot.
+planfiles=""
+while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    [ "$(head -c2 "$f" 2>/dev/null)" = "PK" ] || continue
+    grep -qa 'tfstate' "$f" 2>/dev/null && planfiles="${planfiles}${planfiles:+$'
+'}$f"
+done < <(git ls-files)
+check "no Terraform plan archive is tracked" "$planfiles"
 
 echo
 if [ "$FAILED" -ne 0 ]; then

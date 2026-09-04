@@ -435,4 +435,5 @@ terraform apply tfplan 2>&1 | Tee-Object -FilePath apply.log
 2. check status
 cd D:\Project\Demo-Project\Demo-DevOps\infra\terraform\envs\prod
 terraform state list | Measure-Object -Line    # ต้องได้ 25
-gcloud container clusters list    # STATUS ต้องเป็น RUNNING ไม่ใช่ RECONCILING
+gcloud container clusters list    # STATUS ต้องเป็น RUNNING 
+

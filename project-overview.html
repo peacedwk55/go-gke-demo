@@ -315,11 +315,11 @@ footer {
     ทุกอย่างเริ่มจาก commit เดียว
   </p>
   <div class="facts">
-    <div class="fact"><b>98</b><span>ไฟล์</span></div>
-    <div class="fact"><b class="ok">0</b><span>request หลุด<br>ตอน rollout</span></div>
+    <div class="fact"><b>104</b><span>ไฟล์</span></div>
+    <div class="fact"><b class="ok">0</b><span>request หลุด จาก 13,437<br>ตอน rollout บน GKE</span></div>
     <div class="fact"><b class="ok">0</b><span>service account key</span></div>
     <div class="fact"><b>29</b><span>MB · ขนาด image</span></div>
-    <div class="fact"><b>฿30</b><span>ค่าเดโม GKE<br>ต่อครั้ง</span></div>
+    <div class="fact"><b>฿15</b><span>ค่าเดโม GKE<br>ต่อชั่วโมง</span></div>
   </div>
 </header>
 
@@ -667,7 +667,7 @@ footer {
   <div class="num">ภาพที่ 5</div>
   <h2>ทำอย่างไรจึงจะได้ของขึ้นจริง</h2>
   <p class="say">
-    แถบเขียวคือขั้นที่<b>รันจริงแล้ว</b> ที่เหลือรออยู่ — รวมเวลา ~2 ชั่วโมง เสียเงิน ~฿30
+    ทุกขั้น<b>รันจริงแล้วทั้งหมด</b> — ~1 ชั่วโมงต่อ session เสียเงิน ~฿15 และรื้อทิ้งทุกครั้ง
   </p>
 
   <div class="steps">
@@ -675,11 +675,11 @@ footer {
     <div class="step done"><span class="n">1</span><span class="d"><strong>สร้าง image</strong> — multi-stage ไป distroless 29 MB · Trivy 0 ช่องโหว่</span><span class="t">เสร็จ</span></div>
     <div class="step done"><span class="n">2</span><span class="d"><strong>เขียน manifest</strong> — Kustomize base + overlay · ทดสอบ zero-downtime แล้ว</span><span class="t">เสร็จ</span></div>
     <div class="step done"><span class="n">3</span><span class="d"><strong>เตรียม GCP</strong> — trial ฿10,066 · เช็คโควตา · สร้าง bucket เก็บ state</span><span class="t">เสร็จ</span></div>
-    <div class="step"><span class="n">4</span><span class="d"><strong>terraform apply</strong> — VPC, private GKE 3 โซน, NAT, Workload Identity, registry cache</span><span class="t">15–18 น.</span></div>
-    <div class="step"><span class="n">5</span><span class="d"><strong>ติดตั้ง ArgoCD</strong> แล้วให้มัน sync แอปจาก Git เอง</span><span class="t">15 น.</span></div>
-    <div class="step"><span class="n">6</span><span class="d"><strong>sync LGTM</strong> — Prometheus, Loki, Tempo, Grafana, Alloy ตามลำดับ</span><span class="t">20 น.</span></div>
-    <div class="step"><span class="n">7</span><span class="d"><strong>เก็บหลักฐาน</strong> — ยิง traffic แล้วไล่จากกราฟ → trace → log</span><span class="t">20 น.</span></div>
-    <div class="step"><span class="n">8</span><span class="d"><strong>รื้อทิ้ง</strong> — destroy แล้วเช็คว่าไม่มี disk ค้าง</span><span class="t">10 น.</span></div>
+    <div class="step done"><span class="n">4</span><span class="d"><strong>terraform apply</strong> — VPC, private GKE 3 โซน, NAT, Workload Identity, registry cache</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">5</span><span class="d"><strong>ติดตั้ง ArgoCD</strong> แล้วให้มัน sync แอปจาก Git เอง</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">6</span><span class="d"><strong>sync LGTM</strong> — Prometheus, Loki, Tempo, Grafana, Alloy ตามลำดับ</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">7</span><span class="d"><strong>เก็บหลักฐาน</strong> — ยิง traffic แล้วไล่จากกราฟ → trace → log</span><span class="t">เสร็จ</span></div>
+    <div class="step done"><span class="n">8</span><span class="d"><strong>รื้อทิ้ง</strong> — destroy แล้วเช็คว่าไม่มี disk ค้าง</span><span class="t">เสร็จ</span></div>
   </div>
 </section>
 
@@ -698,21 +698,21 @@ footer {
     <div class="task run">  <span class="id">TASK 2</span><span class="nm">push ขึ้น registry</span><span class="st">รันแล้ว · 2 แท็ก, ไม่มี latest</span></div>
     <div class="task run">  <span class="id">TASK 3</span><span class="nm">Kustomize</span>     <span class="st">รันแล้ว · 0 หลุดจาก 8,017</span></div>
     <div class="task run">  <span class="id">TASK 4</span><span class="nm">Terraform GKE</span> <span class="st">apply จริงแล้ว · รื้อแล้ว</span></div>
-    <div class="task">      <span class="id">TASK 5</span><span class="nm">ArgoCD</span>        <span class="st">ยังไม่เคยรัน</span></div>
-    <div class="task">      <span class="id">TASK 6</span><span class="nm">LGTM</span>          <span class="st">ยังไม่เคยรัน</span></div>
+    <div class="task run">  <span class="id">TASK 5</span><span class="nm">ArgoCD</span>        <span class="st">รันแล้ว · 6/6 Synced · rollback ด้วย git revert</span></div>
+    <div class="task run">  <span class="id">TASK 6</span><span class="nm">LGTM</span>          <span class="st">รันแล้ว · metric→trace→log เชื่อมกันจริง</span></div>
     <div class="task run">  <span class="id">TASK 7</span><span class="nm">CI/CD</span>         <span class="st">รันแล้ว · pipeline เขียวครบสาย</span></div>
     <div class="task run">  <span class="id">TASK 8</span><span class="nm">Ansible</span>       <span class="st">รันแล้ว · รอบสอง changed=0</span></div>
   </div>
 
   <div class="facts">
-    <div class="fact"><b class="ok">7</b><span>รันจริงแล้ว</span></div>
-    <div class="fact"><b>2</b><span>เหลือ — ต้องมีคลัสเตอร์</span></div>
-    <div class="fact"><b>10</b><span>บั๊กที่ linter ผ่านหมด</span></div>
+    <div class="fact"><b class="ok">9</b><span>รันจริงครบทุกข้อ</span></div>
+    <div class="fact"><b class="ok">0</b><span>ข้อที่ยังไม่พิสูจน์</span></div>
+    <div class="fact"><b>7</b><span>บั๊กที่เจอตอนรัน<br>linter ผ่านหมด</span></div>
   </div>
 </section>
 
 <footer>
-  <span>102 ไฟล์</span>
+  <span>104 ไฟล์</span>
   <span>Task 0–8 เขียนครบ</span>
   <span>ข้อมูล ณ 1 ก.ย. 2026</span>
 </footer>

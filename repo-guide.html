@@ -502,7 +502,6 @@ table.status td:first-child {
   white-space: nowrap;
 }
 .pill.run  { background: var(--verd-wash); color: var(--verdigris); border: 1px solid color-mix(in srgb, var(--verdigris) 30%, transparent); }
-.pill.no   { background: var(--surface-2); color: var(--muted); border: 1px solid var(--rule); }
 
 /* ── แผนต่อไป ──────────────────────────────────────────────────────────── */
 .plan { display: grid; gap: 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; margin-top: 8px; }
@@ -1395,8 +1394,8 @@ footer {
           <tr><td>2 · push</td><td><span class="pill run">รันแล้ว</span></td><td>push ขึ้น <code>docker.io/dockerpeace/go-sample-app</code> (public) สองแท็ก <code>v1.0.0</code> และ <code>sha-65e379e</code> ขนาด 6.5 MB บน registry — digest <code>sha256:8357fe65…</code> บันทึกใน <code>docker/README.md</code> ตรงกับที่ registry ตอบ และไม่มีแท็ก <code>latest</code> อยู่เลย</td></tr>
           <tr><td>3 · Kustomize</td><td><span class="pill run">รันแล้ว</span></td><td>deploy ลง kind, วัด zero-downtime ได้ 0/8,017</td></tr>
           <tr><td>4 · Terraform</td><td><span class="pill run">รันแล้ว</span></td><td><code>apply</code> จริงบน GCP ได้ regional private cluster + Cloud NAT + AR remote repo + Workload Identity แล้วรื้อด้วย teardown สองขั้น <b>พบตอน apply:</b> WI binding รันก่อนคลัสเตอร์ที่สร้าง identity pool (<code>Error 400: Identity Pool does not exist</code>) และ node pool ได้ 1 node ไม่ใช่ 3 เพราะใช้ <code>min_node_count</code> แทน <code>total_min_node_count</code> — ทั้งสองข้อ <code>validate</code> ผ่านสบาย</td></tr>
-          <tr><td>5 · ArgoCD</td><td><span class="pill no">ยังไม่รัน</span></td><td>manifest ผ่าน kubeconform แต่ยังไม่เคยเห็น Application sync จริง</td></tr>
-          <tr><td>6 · LGTM</td><td><span class="pill no">ยังไม่รัน</span></td><td>values และ dashboard พร้อม แต่ยังไม่เคยเห็น correlation ทำงาน — ซึ่งเป็นจุดขายของงานนี้</td></tr>
+          <tr><td>5 · ArgoCD</td><td><span class="pill run">รันแล้ว</span></td><td>Application ทั้ง 6 ตัว <code>Synced/Healthy</code> · ทดสอบ <code>ignoreDifferences</code> ด้วยการ scale เป็น 4 ด้วยมือ — ArgoCD ไม่เคยขึ้น <code>OutOfSync</code> และไม่กดกลับ HPA เดินลง 4→3→2 ตาม stabilization ของตัวเอง · <b>rollback ด้วย <code>git revert</code> อย่างเดียว</b> ไม่มี kubectl ไม่มี CLI แล้ววัด zero-downtime ระหว่าง rollout ได้ <b>13,437 request หลุด 0</b></td></tr>
+          <tr><td>6 · LGTM</td><td><span class="pill run">รันแล้ว</span></td><td><b>ลูกโซ่ correlation ครบ</b> — <code>trace_id</code> ตัวเดียวอยู่ทั้ง exemplar ของ Prometheus, span ใน Tempo และ log ใน Loki · dashboard 3 ตัวถูก Grafana โหลดจริง (ตรวจจาก API ไม่ใช่จากไฟล์) · datasource 3 ตัว default ตัวเดียว <b>พบ 7 บั๊ก</b> ที่ linter ผ่านหมด และ 4 ตัว ArgoCD รายงานว่า <code>Synced</code> — รวมถึง Tempo ที่ไม่รับ trace เลย และ Alloy ที่ glob หาไฟล์ log ไม่เจอ</td></tr>
           <tr><td>7 · CI/CD</td><td><span class="pill run">รันแล้ว</span></td><td>run เขียวครบสาย <code>test → invariants → build → scan → push → bump</code> ได้ image <code>sha-65e379e</code> บน Docker Hub และ commit <code>ed9f0c1 [skip ci]</code> กลับเข้า Git ที่เขียน manifest เป็น path ของ Artifact Registry ด้วยแท็กเดียวกัน ไม่เกิด loop (ไม่มี commit ตามหลัง) และไม่มี <code>kubectl</code> ใน CI แม้บรรทัดเดียว <b>พบระหว่างทาง 4 บั๊ก</b> ที่ actionlint จับไม่ได้ทั้งหมด</td></tr>
           <tr><td>8 · Ansible</td><td><span class="pill run">รันแล้ว</span></td><td>รันสองรอบบน container ที่มี systemd จริง รอบสองได้ <code>changed=0</code> ตามเกณฑ์ <b>พบ 6 บั๊ก</b> ที่ ansible-lint โปรไฟล์ production ผ่านหมด รวมถึง <code>validate</code> ที่ขาด <code>%s</code> (ทำให้ <code>daemon.json</code> ไม่ถูกเขียนเลย) และ <code>checksum:</code> บน <code>unarchive</code> ซึ่งไม่มีพารามิเตอร์นี้ — แปลว่า checksum ที่เขียนไว้ไม่เคยถูกตรวจ</td></tr>
         </tbody>
@@ -1404,47 +1403,33 @@ footer {
     </div>
 
     <p class="f-why" style="margin-top:22px">
-      เหลือช่องว่างเดียว และมันคือช่องที่ใหญ่ที่สุด — <strong>Task 5 กับ 6 ต้องมีคลัสเตอร์ที่รันอยู่จริง</strong>
-      ถึงจะพิสูจน์ได้ ทั้งสองข้อจึงเดินคู่กันเป็นงานเดียว ไม่แยกกันทำ
+      ตารางนี้ไม่เหลือช่อง "ยังไม่รัน" แล้ว — Task 0–8 ถูกรันบนของจริงครบทุกข้อ
+      รายละเอียดพร้อมคำสั่งที่พิสูจน์อยู่ใน <code>EVIDENCE.md</code>
+      และขั้นตอนทำซ้ำอยู่ใน <code>RUNBOOK.md</code>
     </p>
 
-    <div class="plan">
-      <div class="plan-item">
-        <b>1</b>
-        <div class="what">
-          <strong>bootstrap ArgoCD + LGTM บน kind ก่อน</strong>
-          <span>ทำบน kind ก่อนเพราะสองงานนี้ต้องแก้วนหลายรอบ — ArgoCD <code>Application</code> ที่ path ผิดหรือ Helm values ที่ resource request สูงเกินจะรู้ตอน sync เท่านั้น ไม่ใช่ตอน lint และการวนแก้บน kind ไม่เสียเงินเลย เป้าหมายคือเห็น <code>Synced/Healthy</code> จริง, เห็น <code>selfHeal</code> ไม่กดทับ HPA ตอน scale, และ rollback ด้วย <code>git revert</code> แล้ว pod กลับไป tag เดิมเอง</span>
-        </div>
-        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
-      </div>
-      <div class="plan-item">
-        <b>2</b>
-        <div class="what">
-          <strong>พิสูจน์ correlation ให้เห็นด้วยตา</strong>
-          <span>นี่คือจุดขายของ Task 6 และเป็นข้อเดียวที่ไฟล์ values พิสูจน์แทนไม่ได้: ยิง request เข้าแอป → เปิดกราฟ RED ใน Grafana → คลิก exemplar บน histogram → เด้งเข้า trace ใน Tempo → กด "logs for this span" → ได้ log บรรทัดที่มี <code>trace_id</code> เดียวกันจาก Loki ถ้าลูกโซ่นี้ขาดตรงไหน แปลว่า <code>trace_id</code> ไม่ได้ไหลครบทั้งสามระบบ</span>
-        </div>
-        <span class="cost free">ไม่มีค่าใช้จ่าย</span>
-      </div>
-      <div class="plan-item">
-        <b>3</b>
-        <div class="what">
-          <strong>รวบขึ้น GKE จริงครั้งเดียว เก็บหลักฐาน แล้วรื้อ</strong>
-          <span>ทำเป็นขั้นสุดท้ายโดยเจตนา เพราะตอนนั้นเหลือพิสูจน์แค่สิ่งที่ kind เลียนแบบไม่ได้: pod ดึง image ผ่าน Artifact Registry remote repo ได้จริง, Workload Identity ให้ token โดยไม่มีไฟล์ key อยู่ที่ไหนเลย, และ topology spread กระจาย pod ข้าม 3 zone จริง ใช้ <code>./scripts/bootstrap-cluster.sh</code> แล้วปิดด้วย teardown สองขั้น จบใน session เดียวราวหนึ่งชั่วโมง</span>
-        </div>
-        <span class="cost paid">มีค่าใช้จ่าย</span>
-      </div>
+    <div class="note">
+      <p><b>สิ่งที่ปิดในรอบสุดท้าย</b> สามข้อที่เคย "ตั้งค่าไว้แต่ไม่เคยเห็น" ถูกพิสูจน์บนคลัสเตอร์ที่สอง:
+      <code>initial_node_count = 1</code> ให้ 3 node หนึ่งตัวต่อ zone (เดิมได้ <code>0/1/0</code> และคำอธิบายในโค้ดผิดมาสองรอบ),
+      Grafana โหลด dashboard ทั้งสามจริง, และ rollback ด้วย <code>git revert</code> ทำงานโดยไม่มี downtime
+      คลัสเตอร์ที่สองขึ้นครบ 6/6 ในครั้งเดียวโดยไม่ต้องแก้อะไร เพราะบั๊กทั้งเจ็ดถูกเจอไปแล้วในรอบแรก</p>
     </div>
 
     <div class="note">
-      <p><b>ทำไมเหลือแค่นี้</b> placeholder สี่ตัวที่เคยเป็นตัวบล็อกถูกเติมครบแล้ว — GCP project, Docker Hub user, GitHub repo และ bucket ของ tfstate ทั้งหมดมีค่าจริง และ pipeline วิ่งผ่านมันมาแล้ว ข้อ 1 กับ 2 เริ่มได้ทันทีโดยไม่ต้องรออะไรและไม่มีค่าใช้จ่าย ส่วนข้อ 3 คือครั้งเดียวที่ต้องเปิดคลัสเตอร์เสียเงิน</p>
+      <p><b>บทเรียนที่ทั้งโปรเจกต์นี้พูดเรื่องเดียวกัน</b> บั๊กสำคัญเกือบทุกตัวผ่าน
+      <code>yamllint</code>, <code>kubeconform</code>, <code>terraform validate</code>,
+      <code>helm lint</code>, <code>actionlint</code>, <code>ansible-lint</code> และ <code>gitleaks</code> มาได้ทั้งหมด
+      และสี่ตัวยังถูก ArgoCD รายงานว่า <code>Synced</code> อีกด้วย —
+      เพราะ <code>Synced</code> บอกว่า manifest ไปถึง API server แล้ว <em>ไม่ได้บอกว่ามันทำงาน</em>
+      ทุกตัวถูกพบเพราะเอาไปรันแล้ววัดผล ไม่ใช่เพราะอ่านโค้ดซ้ำ</p>
     </div>
   </section>
 
   <footer>
-    <span>102 ไฟล์</span>
-    <span>18 commit</span>
-    <span>Task 0–8 เขียนครบ · 7 รันแล้ว · 2 ยังไม่ได้รัน</span>
-    <span>ข้อมูล ณ 1 ก.ย. 2026</span>
+    <span>104 ไฟล์</span>
+    <span>3 เสาหลัก · 11 invariant</span>
+    <span>Task 0–8 · รันจริงครบทั้ง 9 ข้อ</span>
+    <span>ข้อมูล ณ 4 ก.ย. 2026</span>
   </footer>
 
   </main>
