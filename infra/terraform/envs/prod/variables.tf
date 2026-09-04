@@ -128,3 +128,22 @@ variable "spot" {
   type        = bool
   default     = false
 }
+
+# ── GitHub Actions OIDC ─────────────────────────────────────────────────────
+
+variable "github_repository" {
+  description = <<-EOT
+    "owner/repo" of the repository allowed to impersonate the Terraform CI
+    service account. Leave empty to skip creating the GitHub OIDC federation
+    entirely — the terraform.yaml `plan` job stays gated off and nothing else
+    changes.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "state_bucket" {
+  description = "GCS bucket holding Terraform state. Only used to grant the CI identity object access for the state lock; the backend itself is configured in backend.tf."
+  type        = string
+  default     = ""
+}

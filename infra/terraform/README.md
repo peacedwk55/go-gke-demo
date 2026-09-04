@@ -299,6 +299,91 @@ should remove our cluster, not disable project-wide APIs other things may depend
 
 ---
 
+## Enabling `terraform plan` in CI (Workload Identity Federation for GitHub)
+
+`.github/workflows/terraform.yaml` has two jobs. `fmt-validate` runs on every
+push and needs no credentials — it uses `init -backend=false`, so it works even
+on a pull request from a fork. `plan` needs to read real state, and therefore
+needs a real identity.
+
+That identity did not exist. The workflow referenced `secrets.GCP_WIF_PROVIDER`
+and `secrets.GCP_TERRAFORM_SA`, but nothing in this configuration created them,
+so the job stayed gated behind `vars.TERRAFORM_PLAN_ENABLED` and **had never once
+executed**. `modules/github_oidc` closes that: it is the same keyless idea as
+`modules/iam`, applied to CI instead of to pods.
+
+```
+modules/iam           GKE pods    <project>.svc.id.goog[namespace/ksa]
+modules/github_oidc   GitHub CI   token.actions.githubusercontent.com
+```
+
+Optional by construction: leave `github_repository` empty and the module creates
+nothing at all.
+
+### Apply it without building a cluster
+
+Every resource involved is free — pools, providers, service accounts and IAM
+bindings carry no charge — so this does not need the cluster to exist:
+
+```powershell
+terraform apply "-var-file=demo.tfvars" `
+  "-var" "github_repository=<owner>/<repo>" `
+  "-target=module.github_oidc"
+```
+
+13 resources: the 6 federation resources plus the 7 API enablements they depend
+on. No compute, no disks, no cluster. Then:
+
+```powershell
+terraform output github_secrets_setup
+```
+
+which prints the two repository secrets and the two variables to set, including
+`TERRAFORM_PLAN_ENABLED = true`. Open a PR touching `infra/terraform/**` and the
+plan arrives as a comment on it.
+
+> `-target` is normally a smell — it applies part of a configuration and leaves
+> the rest un-reconciled, which is why Terraform prints a warning. It is right
+> here for one specific reason: the alternative is creating a regional GKE
+> cluster at roughly ฿15/hour in order to set up a CI credential that has
+> nothing to do with the cluster.
+
+### Why `roles/viewer`, and why that is not laziness
+
+`plan` must read every resource type in the configuration — compute, container,
+IAM, Artifact Registry, enabled services. Assembling that from individual viewer
+roles is possible and it is a trap: the list breaks the moment a new resource
+type enters the config, and the failure mode is the dangerous one. A plan that
+cannot read a resource reports "will be created" for something that already
+exists — the plan looks clean while describing the wrong world, and a reviewer
+approves drift they cannot see.
+
+Breadth is the property a plan needs, and `roles/viewer` is read-only. The narrow
+grant is the write one: `roles/storage.objectUser` on the state bucket alone,
+because `plan` takes a lock.
+
+There is no apply permission of any kind. This identity can describe what would
+change; it cannot change anything.
+
+### The line that matters
+
+```hcl
+attribute_condition = "attribute.repository == \"${var.github_repository}\""
+```
+
+Without it, the provider accepts a valid OIDC token from **any** repository on
+GitHub — anyone's fork, anyone's personal project — and lets it impersonate the
+service account. The variable rejects wildcards, bare owners and URLs, verified:
+
+```
+peacedwk55/*                               rejected
+peacedwk55                                 rejected
+*                                          rejected
+https://github.com/owner/repo              rejected
+```
+
+---
+
 ## Decisions worth defending
 
 ### Regional, not zonal

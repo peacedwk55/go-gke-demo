@@ -192,3 +192,30 @@ resource "google_service_account_iam_member" "workload_identity" {
   # remove the dependency and reintroduce the failure above.
   depends_on = [module.gke]
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GitHub Actions OIDC — so `terraform plan` can run in CI without a key
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Optional by construction. With `github_repository` empty this module creates
+# nothing, `terraform plan` in CI stays impossible, and the workflow's `plan`
+# job stays gated behind `vars.TERRAFORM_PLAN_ENABLED` — which is the state the
+# repository shipped in, and the reason that job had never once executed.
+#
+# Kept optional rather than mandatory because it is the one part of this
+# configuration that is about the repository rather than about the application:
+# someone forking this to a different repo, or running it with no CI at all,
+# should not be blocked by it.
+#
+# count rather than for_each: this is one thing that either exists or does not,
+# and for_each over a single-element set would only obscure that.
+module "github_oidc" {
+  source = "../../modules/github_oidc"
+  count  = var.github_repository == "" ? 0 : 1
+
+  project_id        = var.project_id
+  github_repository = var.github_repository
+  state_bucket      = var.state_bucket != "" ? var.state_bucket : "${var.project_id}-tfstate"
+
+  depends_on = [google_project_service.required]
+}

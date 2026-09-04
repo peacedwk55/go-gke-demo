@@ -45,3 +45,10 @@ output "kustomize_set_image_command" {
   description = "Copy-paste bump command, with the registry path already resolved. DOCKERHUB_USER and TAG still need filling in."
   value       = "kustomize edit set image go-sample-app=${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.dockerhub_remote.repository_id}/DOCKERHUB_USER/go-sample-app:TAG"
 }
+
+# ── GitHub Actions OIDC (empty unless var.github_repository is set) ─────────
+
+output "github_secrets_setup" {
+  description = "The two repository secrets and the variable that ungates the terraform.yaml plan job. Empty when GitHub OIDC is not enabled."
+  value       = length(module.github_oidc) > 0 ? module.github_oidc[0].github_secrets_setup : "GitHub OIDC not enabled — set github_repository to create it."
+}
