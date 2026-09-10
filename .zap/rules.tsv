@@ -1,0 +1,45 @@
+# ZAP baseline policy — which findings block the build.
+#
+# Format: <rule-id>  <IGNORE|WARN|FAIL>  <name>   (tab separated)
+# The build fails on FAIL only. WARN is printed on every run and blocks nothing,
+# because the scan runs with -I.
+#
+# Every line below is the result of running the scan, reading the output, and
+# deciding. Nothing here is a guess, and nothing here is IGNORE — an ignored
+# rule is a rule nobody will ever look at again.
+#
+# ── 10021 — the reason this scan exists ──────────────────────────────────────
+# The app reflects ?name= into the response body without escaping it. That is
+# safe only because every response carries Content-Type: text/plain AND
+# X-Content-Type-Options: nosniff. Remove the second one and a browser is free
+# to sniff the body as HTML, at which point the reflection is stored XSS.
+#
+# CLAUDE.md 1.1 requires both headers. TestHelloIsNotHTML asserts them, and
+# gosec flags the reflection statically (G705). This is the third check, and the
+# only one that looks at the running binary from the outside — it would catch the
+# header being lost in the Dockerfile, in a middleware, or by a proxy, none of
+# which a unit test or a source scanner can see.
+#
+# Measured on 2026-09-10, both directions, before this file was committed:
+#   hardened build  -> PASS  (65 PASS,  0 FAIL, 2 WARN)
+#   nosniff removed -> WARN  (64 PASS,  0 FAIL, 3 WARN)   <- the one line differed
+# Set to FAIL so that difference stops the build instead of scrolling past.
+#
+# ── 90004 / 10049 — reported on every run, deliberately not blocking ─────────
+# Both appear on the hardened build too, so promoting either to FAIL would fail
+# the pipeline permanently on the current, correct code. Both are also real, and
+# both are fixed by a header the app does not yet send:
+#
+#   90004  Cross-Origin-Resource-Policy — cross-origin read protection
+#          (Spectre-class). Low value for a text/plain ClusterIP service with
+#          no Ingress in front of it, which is why it is not in the 1.1 contract.
+#   10049  Storable and Cacheable Content — no Cache-Control on a response that
+#          reflects user input. There is no shared cache in this path today; put
+#          one in front and this becomes a cross-user leak.
+#
+# Left at WARN rather than IGNORE: the honest state is "seen, understood, not
+# worth a contract change yet", and WARN keeps them on screen so that stays a
+# decision rather than a silence. Fixing them means amending 1.1 first.
+10021	FAIL	X-Content-Type-Options Header Missing
+90004	WARN	Cross-Origin-Resource-Policy Header Missing or Invalid
+10049	WARN	Storable and Cacheable Content

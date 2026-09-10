@@ -376,6 +376,11 @@ commit+push manifest change → ArgoCD detects → sync → GKE pulls via AR
     `approvals=1` is unsatisfiable on a single-author repository because GitHub
     does not let anyone approve their own PR.
   - `.github/CODEOWNERS` now records the intended ownership boundary — app code and overlay values to the app team, pipeline / infra / base manifests / the gates themselves to platform. **CODEOWNERS enforces nothing on its own**: it applies only where a pull request is required and reviews are enforced, so switching branch protection on is the step that gives it effect. Steps in `.github/workflows/README.md`.
+  - **DAST closes the last gap in the gate stack, and it was verified by making it fail.** `ci.yaml` now runs `zap-baseline.py` against the built image inside the `build` job — after Trivy, before the Docker Hub login, so the image under test is the one that would be published and has not been. Policy in `.zap/rules.tsv`, reasoning in `.zap/README.md`.
+    - Rule **10021** (`X-Content-Type-Options Header Missing`) is set to `FAIL`. It was proven both directions against a copy of the app with the headers deleted: hardened `FAIL-NEW: 0 / PASS: 65 / exit 0`, `nosniff` removed `FAIL-NEW: 1 / PASS: 64 / exit 1`. One line differed and it was the right one.
+    - This is the **only** gate that reads HTTP off the wire. The tests read the handler, gosec reads the source, Trivy reads the package list — none of them notice a header lost between the handler and the socket.
+    - The honest scope: the vulnerable build still returned `text/plain` (Go's sniffer does not see `Hello <script>…` as HTML), so ZAP reports the missing header rather than an XSS. The headers are defence in depth and this gate protects the headers — a narrower claim than "DAST catches the XSS", and the true one.
+    - `zap-full-scan.py` was measured and rejected: 8 min 08 s over 140 rules, finding nothing the 2 min 28 s passive baseline had not. Four plaintext endpoints give an active scanner nothing to push on. Full-scan command kept in `.zap/README.md` for when that stops being true.
 - Docker Hub creds via repository secrets only. Optional bonus: keyless **cosign** signing.
 - Separate `terraform.yaml` workflow: fmt/validate/plan as PR checks (plan output as PR comment; apply manual/protected).
 

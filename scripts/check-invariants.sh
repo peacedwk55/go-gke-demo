@@ -126,7 +126,7 @@ check "GitHub Actions are not pinned to a moving ref" "$(
 # ── 7. Every directory documents itself ─────────────────────────────────────
 # "Every directory ships with a README explaining why, not just how."
 missing=""
-for d in app docker k8s infra/terraform argocd observability ansible; do
+for d in app docker k8s infra/terraform argocd observability ansible .zap; do
     [ -f "$d/README.md" ] || missing="${missing}${missing:+, }$d"
 done
 check "every top-level directory has a README" "$missing"

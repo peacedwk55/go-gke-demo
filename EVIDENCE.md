@@ -383,6 +383,99 @@ addresses, Cloud NAT routers, forwarding rules and Artifact Registry
 repositories; only Google's auto-created `default` VPC and the 628-byte tfstate
 bucket remain. Billing is effectively zero.
 
+## Third session — the DAST gate, proven by making it fail
+
+Every gate added to this repository before this one was verified by watching it
+pass. That is the weaker half of the proof: a check that reports nothing looks
+identical whether it is working or misconfigured. The `gosec` step is the
+counter-example that made the point — it found a real finding on its first run,
+which is how anyone knew it was reading the code at all.
+
+So the DAST gate was built the other way round: prove it fails first.
+
+### Both directions, measured
+
+The app was copied outside the working tree and both security headers deleted
+from `writePlain`. Then both images were scanned with the same command and the
+same policy file.
+
+```
+$ docker run -d --name vuln-target -p 18081:8080 go-sample-app:vuln
+$ curl -s -D- -o /dev/null 'http://localhost:18081/?name=<script>alert(1)</script>'
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+                                        <- no X-Content-Type-Options at all
+$ curl -s 'http://localhost:18081/?name=<script>alert(1)</script>'
+Hello <script>alert(1)</script>
+```
+
+Scanned, hardened build:
+
+```
+FAIL-NEW: 0  FAIL-INPROG: 0  WARN-NEW: 2  WARN-INPROG: 0  INFO: 0  IGNORE: 0  PASS: 65
+exit=0
+```
+
+Scanned, `nosniff` removed:
+
+```
+WARN-NEW: Storable and Cacheable Content [10049] x 3
+WARN-NEW: Cross-Origin-Resource-Policy Header Missing or Invalid [90004] x 1
+FAIL-NEW: X-Content-Type-Options Header Missing [10021] x 1
+FAIL-NEW: 1  FAIL-INPROG: 0  WARN-NEW: 2  WARN-INPROG: 0  INFO: 0  IGNORE: 0  PASS: 64
+exit=1
+```
+
+Exactly one line differs between the two runs, and it is the line the gate exists
+for. `.zap/rules.tsv` marks rule 10021 `FAIL`, which turns that difference into a
+non-zero exit instead of a warning that scrolls past.
+
+### What the vulnerable build did *not* do, which matters
+
+It still returned `Content-Type: text/plain`. Go's MIME sniffer does not classify
+`Hello <script>alert(1)</script>` as HTML, because the `Hello ` prefix comes
+first. So the reflection is not exploitable in a current browser even with
+`nosniff` gone, and ZAP correctly reports a missing header rather than an XSS.
+
+The honest claim is therefore narrower than "DAST catches the XSS": the headers
+are defence in depth, and this gate protects the headers. Claiming the wider
+thing would have been easy and wrong — `#nosec G705` on `server.go:149` is
+justified by the same pair of headers, so the note explaining why the XSS is not
+exploitable is the note explaining what this gate is really guarding.
+
+### The full scan was measured too, and rejected on the numbers
+
+| | wall clock | rules reported PASS | alerts found |
+|---|---|---|---|
+| `zap-baseline.py` (passive) | 2 min 28 s | 65 | 2 warnings |
+| `zap-full-scan.py` (active) | 8 min 08 s | 140 | 1 warning |
+
+(The two overlapped on one laptop, so if anything the baseline figure is
+pessimistic and the gap is wider than the table shows.)
+
+The full scan found **nothing the baseline had not**. Four endpoints, all
+`text/plain`, no forms, cookies, session or database — an active scanner has
+nothing to push on. CI runs the baseline; `.zap/README.md` carries the full-scan
+command for when the app grows surface worth attacking.
+
+### Two failures caught before CI could find them
+
+**`owasp/zap2docker-stable` does not exist any more.** It is the image name in
+most DAST tutorials and it now answers `object not found`. `zaproxy/zap-stable`
+is the current one, checked against the registry rather than copied.
+
+**ZAP runs as uid 1000; a runner workspace belongs to uid 1001.** Without
+`chmod 777` on the mounted output directory the scan completes and then the step
+fails writing its report — a red build for a reason unrelated to security. Docker
+Desktop's mounts are permissive, so this is invisible locally and certain in CI.
+It is the same shape as the Alloy `/tmp` read-only failure earlier in this
+project: the container's identity, not the container's logic.
+
+Also, and in the same family as earlier mistakes here: the first draft of the CI
+step carried the comment "`make dast-full` is the manual route." This repository
+has no Makefile. The comment was written because it sounded like the right shape
+of answer, and it would have shipped as documentation pointing at nothing.
+
 ### Still outstanding
 
 - `initial_node_count = 1` is committed but **not applied**: changing it forces

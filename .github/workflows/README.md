@@ -5,7 +5,7 @@ Two pipelines with deliberately different endings.
 | | `ci.yaml` | `terraform.yaml` |
 |---|---|---|
 | Triggered by | `app/` `docker/` `k8s/base/` `scripts/` … | `infra/terraform/**` |
-| Gates | tests · **gosec** · **govulncheck** · 11 invariants · **gitleaks** · kubeconform · Trivy IaC · Trivy image | `fmt` · `validate` · `plan` |
+| Gates | tests · gosec · govulncheck · 11 invariants · gitleaks · kubeconform · Trivy IaC · Trivy image · **ZAP baseline** | `fmt` · `validate` · `plan` |
 | Ends with | a Git commit — ArgoCD does the rest, unattended | **a plan for a human to read** |
 | Touches the cluster | never | never |
 
@@ -20,7 +20,7 @@ no revert brings it back.
 ## `ci.yaml` — the order is load-bearing
 
 ```
-test  →  invariants  →  render + validate  →  build  →  scan  →  push  →  bump
+test  →  invariants  →  render + validate  →  build  →  scan  →  DAST  →  push  →  bump
 ```
 
 **Scan before push, not after.** Reversed, a vulnerable image is already
@@ -74,6 +74,47 @@ reintroduce an infinite loop, and the marker in the message is independent of th
 > on a code commit it means tests, scan and build are all skipped with main
 > carrying unverified code and nothing anywhere reporting it. Invariant 10 checks
 > the commits you are about to push for exactly this.
+
+---
+
+### The DAST gate, and why it is the only one that proves anything about the binary
+
+Every other gate reads a *description* of the program: the tests read the
+handler, gosec reads the source, Trivy reads the image's package list, the
+invariants read the repository. The ZAP step is the only one that speaks HTTP to
+the running process and reads what actually comes back.
+
+That distinction is not decorative here. The app reflects `?name=` unescaped and
+is safe only because of two response headers (CLAUDE.md §1.1). A unit test can
+prove the handler sets them; only a request from outside can prove they survive
+the Dockerfile, the server config, and anything that might sit in front.
+
+It runs **after Trivy and before the Docker Hub login**, for the same reason
+Trivy does — the image under test is the one that would be published, and it has
+not been published yet.
+
+**It was proven to fail before it was committed.** The app was copied outside the
+working tree with both headers deleted, and both builds were scanned:
+
+```
+hardened build           FAIL-NEW: 0   PASS: 65   exit 0
+X-Content-Type-Options   FAIL-NEW: 1   PASS: 64   exit 1
+  removed                └─ X-Content-Type-Options Header Missing [10021]
+```
+
+One line differed, and it was the right line. A gate observed only passing is not
+a gate that is known to work — which is the recurring lesson of this repository,
+and the reason `.zap/rules.tsv` marks rule 10021 `FAIL` and says so in a comment.
+
+`.zap/README.md` carries the rest: why the fast passive baseline beats the
+8-minute full scan on an app with four plaintext endpoints (measured — the full
+scan found nothing extra), why the output directory needs `chmod 777` (ZAP is uid
+1000, the runner workspace is uid 1001), and why the tutorial image name
+`owasp/zap2docker-stable` no longer resolves.
+
+It is deliberately **not** in the required-status-checks list, and that is a
+judgement call rather than an oversight: it lives inside `Build, scan, push`,
+which already is required, so it gates every pull request through that job.
 
 ---
 
