@@ -146,6 +146,23 @@ func writePlain(w http.ResponseWriter, status int, body string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
+	// #nosec G705 -- Reviewed, and the finding is a true observation with a
+	// mitigation gosec cannot see.
+	//
+	// gosec's taint analysis is right that user input reaches the response body:
+	// handleHello passes ?name= straight through. What it has no model for is
+	// that the two headers set three lines above ARE the sanitiser — with an
+	// explicit text/plain and nosniff, a browser renders "<script>" as the six
+	// characters it is, and there is no HTML context for it to escape into.
+	//
+	// Escaping would be the wrong fix, not a stricter one. In a text/plain
+	// response "&lt;b&gt;" is literally what the reader sees, so html.EscapeString
+	// would corrupt correct output while protecting nothing.
+	//
+	// The guard against this suppression going stale is TestHelloIsNotHTML in
+	// server_test.go: it requests ?name=<script>alert(1)</script> and asserts
+	// both headers. Remove either one and the test fails, so the mitigation this
+	// annotation depends on cannot regress silently.
 	io.WriteString(w, body)
 }
 
