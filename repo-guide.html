@@ -612,22 +612,22 @@ footer {
 
     <div class="files">
       <div class="file">
-        <div class="f-name">CLAUDE.md<em>426 บรรทัด</em></div>
+        <div class="f-name">CLAUDE.md<em>515 บรรทัด</em></div>
         <div class="f-desc"><p>ตัวสเปก เก็บ design decision, ข้อตกลง และ Definition-of-Done ต่อ Task ทุกอย่างที่เหลือในรีโปต้องตอบไฟล์นี้ได้ ดังนั้นถ้าโค้ดกับไฟล์นี้ขัดกัน หมายความว่าอันใดอันหนึ่งเป็นบั๊ก</p></div>
       </div>
       <div class="file">
-        <div class="f-name">README.md<em>391 บรรทัด</em></div>
+        <div class="f-name">README.md<em>508 บรรทัด</em></div>
         <div class="f-desc"><p>สิ่งที่ผู้ตรวจอ่านก่อน: แผนภาพสถาปัตยกรรม (Mermaid), แผนที่รีโป, quickstart เรียงตามลำดับพึ่งพา, decision ที่ครอบหลายส่วน, ตารางผลตรวจที่วัดจริง และหัวข้อ trade-off ที่บอกตรง ๆ ว่าอะไรยังไม่ได้ทำและเพราะอะไร</p></div>
       </div>
       <div class="file">
-        <div class="f-name">.dockerignore<em>59 บรรทัด</em></div>
+        <div class="f-name">.dockerignore<em>72 บรรทัด</em></div>
         <div class="f-desc">
           <p>กัน VCS, เอกสาร, ทุกโฟลเดอร์ infra, ไฟล์เทสต์ และทุกอย่างที่มีรูปร่างเหมือน credential ออกจาก build context</p>
           <p><strong>ต้องอยู่ที่นี่ ไม่ใช่ใน <code>docker/</code></strong> เพราะ build context คือ root ของรีโป และ Docker อ่านไฟล์นี้จาก root ของ context เท่านั้น ถ้าวางใน <code>docker/</code> มันจะถูกเมินโดยไม่มีคำเตือน — build สำเร็จ แต่ส่งทั้งรีโปเข้า daemon</p>
         </div>
       </div>
       <div class="file">
-        <div class="f-name">.gitignore<em>89 บรรทัด</em></div>
+        <div class="f-name">.gitignore<em>111 บรรทัด</em></div>
         <div class="f-desc"><p>กัน secret, kubeconfig, Terraform state และ <code>*.tfvars</code> สังเกตบรรทัดที่มี <code>!</code> นำหน้า: <code>*.tfvars.example</code> กับ <code>.terraform.lock.hcl</code> จงใจ <em>เก็บ</em> ไว้ — lock file คือสิ่งที่ pin เวอร์ชันและ checksum ของ provider</p></div>
       </div>
       <div class="file">
@@ -636,6 +636,10 @@ footer {
           <p><code>* text=auto eol=lf</code> พร้อมกฎเฉพาะสำหรับทุกนามสกุลในรีโป</p>
           <p><strong>นี่คือไฟล์เรื่องความถูกต้อง ไม่ใช่เรื่องสไตล์</strong> เครื่องที่พัฒนามี <code>core.autocrlf=true</code> ระดับ system ถ้าไม่มีกฎพวกนี้ clone ใหม่บน Windows จะได้ CRLF แล้วค่าใน <code>config.env</code> จะกลายเป็น <code>"5s\r"</code> → <code>time.ParseDuration</code> พัง pod crash-loop ส่วน systemd unit ที่ template ออกมาจะโหลดไม่ได้เลย</p>
         </div>
+      </div>
+      <div class="file">
+        <div class="f-name">.zap/rules.tsv<em>45 บรรทัด</em></div>
+        <div class="f-desc"><p>นโยบายว่าสิ่งที่ ZAP เจอจะทำอะไรกับ build — <code>FAIL</code> ทำให้ build แดง <code>WARN</code> พิมพ์ทุกรอบแต่ไม่บล็อก ไม่มีบรรทัดไหนเป็น <code>IGNORE</code> เพราะ rule ที่ถูกละเลยคือ rule ที่ไม่มีใครกลับมาดูอีก</p><p>rule <code>10021</code> เป็น <code>FAIL</code> เพราะมันคือเหตุผลที่ประตูนี้มีอยู่ แอปสะท้อน <code>?name=</code> กลับมาโดยไม่ escape ซึ่งปลอดภัยเพราะ header สองตัวเท่านั้น <strong>วัดทั้งสองทางก่อนคอมมิต</strong>: ตัวจริง <code>exit 0</code> · สำเนาที่ถอด <code>nosniff</code> ออก <code>exit 1</code></p></div>
       </div>
       <div class="file">
         <div class="f-name">.trivyignore<em>51 บรรทัด</em></div>
@@ -686,7 +690,7 @@ footer {
         <div class="f-desc"><p>env → <code>Config</code> ตามหลัก 12-factor คืน error เมื่อค่าอ่านไม่ได้ ไม่ตกกลับไปใช้ค่าดีฟอลต์เงียบ ๆ เพราะการพิมพ์ผิดใน ConfigMap ควรทำให้ได้ <code>CrashLoopBackOff</code> พร้อมข้อความชัด ไม่ใช่ pod ที่รันอยู่เงียบ ๆ ด้วยค่าที่ไม่มีใครเลือก</p></div>
       </div>
       <div class="file">
-        <div class="f-name">server.go<em>178 บรรทัด</em></div>
+        <div class="f-name">server.go<em>195 บรรทัด</em></div>
         <div class="f-desc">
           <p>route, middleware และ handler ใช้ <code>GET /{$}</code> สำหรับ root — ตัว <code>{$}</code> คือคำตอบของปัญหา catch-all <code>/</code> เดิม ที่จะตอบ <code>/healthz</code> และ <code>/readyz</code> ด้วย <code>200 Hello</code> ทำให้ probe ทั้ง 3 ตัวผ่านโดยไม่ได้ทดสอบอะไรเลย</p>
           <p><code>writePlain()</code> ตั้ง <code>text/plain</code> กับ <code>nosniff</code> ทุก response — ถ้าไม่มี Go จะเดา content type จาก body แล้ว body ที่ขึ้นต้นด้วย <code>&lt;</code> จะถูกเสิร์ฟเป็น HTML ทำให้ <code>?name=&lt;script&gt;</code> รันได้</p>
@@ -736,7 +740,7 @@ footer {
 
     <div class="files">
       <div class="file">
-        <div class="f-name">Dockerfile<em>103 บรรทัด</em></div>
+        <div class="f-name">Dockerfile<em>107 บรรทัด</em></div>
         <div class="f-desc">
           <p><code>golang:1.26-bookworm</code> ใช้ build; <code>distroless/static-debian12:nonroot</code> ใช้รัน — <strong>pin ด้วย digest</strong> เพราะ <code>:nonroot</code> เป็น tag ที่ขยับได้ และคำว่า "pin ทุกเวอร์ชัน" ไร้ความหมายถ้า base image เปลี่ยนใต้เท้าเราได้</p>
           <p><code>CGO_ENABLED=0 -trimpath -ldflags="-s -w"</code>, <code>USER 65532</code> และมี assert ตอน build ว่า binary เป็น static — ถ้าเป็น dynamic มันจะ compile ผ่านแล้วไปพังตอนรันบน distroless ด้วยข้อความ "no such file or directory" ที่ชวนให้เข้าใจผิด</p>
@@ -744,7 +748,7 @@ footer {
         </div>
       </div>
       <div class="file">
-        <div class="f-name">README.md<em>111 บรรทัด</em></div>
+        <div class="f-name">README.md<em>128 บรรทัด</em></div>
         <div class="f-desc"><p>ทุกทางเลือกพร้อมเหตุผลในตาราง คำสั่ง build/push ที่ใช้จริง การแยกสอง registry และผลที่วัดได้ — รวมถึงการยืนยันในเครื่องว่า <code>exec /bin/sh</code> ล้มเหลว</p></div>
       </div>
     </div>
@@ -864,18 +868,18 @@ footer {
     <div class="files">
       <div class="group">envs/prod/ — ที่เดียวที่รัน terraform</div>
       <div class="file">
-        <div class="f-name">envs/prod/main.tf<em>149 บรรทัด</em></div>
+        <div class="f-name">envs/prod/main.tf<em>221 บรรทัด</em></div>
         <div class="f-desc">
           <p>pin provider <code>~&gt; 6.0</code>, เปิด API ที่ต้องใช้ 7 ตัวก่อนที่อะไรจะเรียกใช้ และเรียกโมดูลทั้งสาม</p>
           <p>สร้าง <strong>Artifact Registry remote repository</strong> ด้วย — เป็น cache แบบ read-through ของ Docker Hub เพราะ private node ทุกตัวออกเน็ตผ่าน Cloud NAT IP เดียว การดึงจาก Docker Hub ตรง ๆ จึงแบ่ง rate limit ต่อ IP กันทั้งคลัสเตอร์ rollout ที่รีสตาร์ท pod เก้าโหนดอาจใช้หมด และอาการที่ได้คือ <code>ImagePullBackOff</code> กับ 429 กลางการ deploy</p>
         </div>
       </div>
       <div class="file">
-        <div class="f-name">envs/prod/variables.tf<em>124 บรรทัด</em></div>
+        <div class="f-name">envs/prod/variables.tf<em>149 บรรทัด</em></div>
         <div class="f-desc"><p>ทุก input พร้อมเหตุผล <code>master_authorized_networks</code> ไม่มีค่าดีฟอลต์ เพราะค่าดีฟอลต์ตรงนี้จะไม่ปลอดภัย หรือไม่ก็ล็อกตัวเองออกจากคลัสเตอร์</p></div>
       </div>
       <div class="file">
-        <div class="f-name">envs/prod/outputs.tf<em>47 บรรทัด</em></div>
+        <div class="f-name">envs/prod/outputs.tf<em>54 บรรทัด</em></div>
         <div class="f-desc"><p>การส่งมอบให้ชั้น workload: คำสั่ง <code>get-credentials</code>, บรรทัด KSA annotation ที่ถูกต้องเป๊ะ, path ที่ AR ใช้ดึง image และคำสั่ง <code>kustomize edit set image</code> พร้อมคัดลอก — เพื่อให้สองครึ่งของ Workload Identity binding ไม่หลุดกันเพราะพิมพ์ผิด</p></div>
       </div>
       <div class="file">
@@ -893,7 +897,7 @@ footer {
 
       <div class="group">modules/gke/ — คลัสเตอร์และ node pool</div>
       <div class="file">
-        <div class="f-name">modules/gke/main.tf<em>273 บรรทัด</em></div>
+        <div class="f-name">modules/gke/main.tf<em>330 บรรทัด</em></div>
         <div class="f-desc">
           <p><code>location = region</code> คือสวิตช์ทั้งหมดที่ทำให้เป็น regional cluster ถ้าไม่มีอันนี้ การกระจาย pod ข้าม zone ใน Deployment ก็ไร้ความหมาย</p>
           <p><code>datapath_provider = "ADVANCED_DATAPATH"</code> และ <strong>ไม่มี block <code>network_policy</code></strong> เพราะสองอันนี้ใช้ร่วมกันไม่ได้ GKE จะปฏิเสธคลัสเตอร์ที่ตั้งทั้งคู่ ประโยค "เปิด network policy และ Dataplane V2" เป็นสิ่งที่เขียนสเปกได้ง่ายแต่ apply ไม่ได้</p>
@@ -901,7 +905,7 @@ footer {
         </div>
       </div>
       <div class="file">
-        <div class="f-name">modules/gke/variables.tf<em>133 บรรทัด</em></div>
+        <div class="f-name">modules/gke/variables.tf<em>175 บรรทัด</em></div>
         <div class="f-desc"><p>ขนาด node พร้อมเหตุผล และ validation 2 ข้อบน <code>master_authorized_networks</code>: ต้องไม่ว่าง และ <strong>ปฏิเสธ <code>0.0.0.0/0</code></strong> เพื่อให้การตั้งค่าผิดที่แย่ที่สุดของ GKE ใส่เข้ามาทาง tfvars ไม่ได้</p></div>
       </div>
       <div class="file">
@@ -911,7 +915,7 @@ footer {
 
       <div class="group">modules/iam/ — คำตอบของ "ไม่ใช้ key"</div>
       <div class="file">
-        <div class="f-name">modules/iam/main.tf<em>119 บรรทัด</em></div>
+        <div class="f-name">modules/iam/main.tf<em>123 บรรทัด</em></div>
         <div class="f-desc">
           <p>Node SA ที่มีสิทธิ์เพียง 5 role — ไม่ใช้ Compute Engine default ซึ่งถือ <code>roles/editor</code> ทั้งโปรเจกต์ ทำให้ container escape ครั้งเดียวกลายเป็นการยึดโปรเจกต์ทั้งใบ</p>
           <p>แล้วสร้าง app GSA และ binding เดียวที่ตอบเงื่อนไขของโจทย์: <code>roles/iam.workloadIdentityUser</code> บน <code>serviceAccount:&lt;project&gt;.svc.id.goog[prod/go-sample-app]</code> ใช้ <code>_iam_member</code> ไม่ใช่ <code>_iam_binding</code> เพราะตัวหลังเป็น authoritative และจะลบ binding ที่ Terraform ไม่รู้จักออกเงียบ ๆ</p>
@@ -943,7 +947,11 @@ footer {
         <div class="f-desc"><p>ชื่อต่าง ๆ ที่โมดูล GKE ต้องใช้ รวมถึง <code>node_tag</code> ซึ่ง node pool ต้องติด ไม่งั้นกฎ firewall ทั้งหมดจะไม่มีผล</p></div>
       </div>
       <div class="file">
-        <div class="f-name">README.md<em>258 บรรทัด</em></div>
+        <div class="f-name">modules/github_oidc/main.tf<em>136 บรรทัด</em></div>
+        <div class="f-desc"><p>Workload Identity Federation สำหรับ GitHub Actions — pool, OIDC provider ที่ <code>attribute_condition</code> ผูกกับรีโปนี้เท่านั้น และ service account <code>terraform-ci</code> ที่มีสิทธิ์<strong>อ่าน</strong> state กับ project</p><p>คนละ pool กับ Workload Identity ของ pod — ตัวนั้นให้ pod ใน GKE คุยกับ GCP ตัวนี้ให้ runner คุยกับ GCP ไม่มีไฟล์ key ทั้งสองทาง <code>count</code> ทำให้ทั้งโมดูลปิดได้ถ้าไม่ตั้งชื่อรีโป</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">README.md<em>494 บรรทัด</em></div>
         <div class="f-desc"><p>แผนภาพ ASCII ของ flow Workload Identity, สามจุดที่พังเงียบ ๆ ได้, ลำดับ apply และ teardown สองขั้น พร้อม decision ทุกข้อและ trade-off ของมัน</p></div>
       </div>
     </div>
@@ -1021,11 +1029,11 @@ footer {
         <div class="f-desc"><p>โหมด SingleBinary ไม่ใช่ topology ดีฟอลต์ที่แยกเป็น 8 Deployment — อันนั้นถูกต้องเมื่อสเกลใหญ่ แต่เป็นภาระเปล่า ๆ สำหรับ log ของแอปเดียว <code>compactor.retention_enabled: true</code> จำเป็นเพื่อให้ retention ถูกบังคับจริง ถ้าไม่มี <code>retention_period</code> เป็นเพียงข้อเสนอแนะและดิสก์จะเต็ม</p></div>
       </div>
       <div class="file">
-        <div class="f-name">tempo.values.yaml<em>169 บรรทัด</em></div>
+        <div class="f-name">tempo.values.yaml<em>181 บรรทัด</em></div>
         <div class="f-desc"><p>ใช้ <code>tempo-distributed</code> ไม่ใช่ single-binary ด้วยเหตุผลเฉพาะข้อเดียว: มีแต่ตัวนี้ที่รัน <strong>metrics-generator</strong> ซึ่งสร้าง service graph และ span metrics ที่ทำให้ service map ใน Grafana ทำงาน — และให้การวัด latency ชุดที่สองที่เป็นอิสระจาก histogram ของแอปเอง</p></div>
       </div>
       <div class="file">
-        <div class="f-name">alloy.values.yaml<em>203 บรรทัด</em></div>
+        <div class="f-name">alloy.values.yaml<em>255 บรรทัด</em></div>
         <div class="f-desc">
           <p>DaemonSet ที่เก็บข้อมูล ตั้งค่าด้วยภาษา River ใช้ Alloy ไม่ใช่ Promtail เพราะ Promtail เลิก support แล้วและจัดการได้แค่ log ตัวนี้จึงเป็น agent เดียวแทนที่จะเป็นสามตัว</p>
           <p><code>trace_id</code> เก็บเป็น <strong>structured metadata ไม่ใช่ stream label</strong> เพราะมันไม่ซ้ำต่อ request ถ้าเลื่อนขึ้นเป็น label จะสร้าง Loki stream หนึ่งอันต่อหนึ่ง request และทำลาย index ส่วน <code>pod</code> ถูกกันออกด้วยเหตุผลเดียวกัน</p>
@@ -1079,15 +1087,19 @@ footer {
 
     <div class="files">
       <div class="file">
-        <div class="f-name">ci.yaml<em>353 บรรทัด</em></div>
+        <div class="f-name">.github/CODEOWNERS<em>94 บรรทัด</em></div>
+        <div class="f-desc"><p>เส้นแบ่งความเป็นเจ้าของ — <code>app/</code> และค่าใน overlay เป็นของทีมแอป ส่วน <code>.github/</code> <code>scripts/</code> <code>infra/</code> <code>k8s/base/</code> คือตัวประตูเอง เป็นของ platform</p><p><strong>ไฟล์นี้ไม่บังคับอะไรด้วยตัวเอง</strong> CODEOWNERS มีผลเฉพาะที่ต้องใช้ PR และบังคับ review — ruleset บน <code>main</code> คือสิ่งที่ทำให้มันมีผล</p></div>
+      </div>
+      <div class="file">
+        <div class="f-name">ci.yaml<em>548 บรรทัด</em></div>
         <div class="f-desc">
           <p>4 job: <code>test</code> → <code>invariants</code> → <code>build</code> → <code>bump-manifest</code></p>
-          <p>ลำดับภายใน <code>build</code> สำคัญ: build image ลง tarball ในเครื่องก่อน <strong>สแกน</strong> แล้วจึง push การสแกนหลัง push เป็นละคร เพราะ image ที่มีช่องโหว่ถูกดึงไปใช้ได้แล้ว</p>
+          <p>ลำดับภายใน <code>build</code> สำคัญ: build image ลง tarball ในเครื่องก่อน <strong>สแกน</strong> แล้วจึง push การสแกนหลัง push เป็นละคร เพราะ image ที่มีช่องโหว่ถูกดึงไปใช้ได้แล้ว</p><p><strong>DAST อยู่ในลำดับนี้ด้วย</strong> — <code>zap-baseline.py</code> รันต่อ image ตัวเดียวกันนั้น บน bridge network ในตัว runner หลัง Trivy และ<em>ก่อน</em> login เข้า Docker Hub เป็นประตูเดียวในไฟล์นี้ที่อ่าน HTTP จากสายจริง — เทสต์อ่าน handler, gosec อ่านซอร์ส, Trivy อ่านรายชื่อ package ไม่มีตัวไหนเห็น header ที่หายไประหว่าง handler กับ socket</p>
           <p><code>bump-manifest</code> เขียน image ใหม่เป็น path ของ Artifact Registry ด้วย tag เดิม commit พร้อม <code>[skip ci]</code> แล้ว push ใช้ GitHub App token ไม่ใช่ <code>GITHUB_TOKEN</code> เพราะ push ของ token ตัวหลังไม่ trigger workflow และถูก branch protection บล็อก</p>
         </div>
       </div>
       <div class="file">
-        <div class="f-name">terraform.yaml<em>161 บรรทัด</em></div>
+        <div class="f-name">terraform.yaml<em>187 บรรทัด</em></div>
         <div class="f-desc">
           <p><code>fmt</code>, <code>validate</code> และ <code>plan</code> บน PR โดย plan ถูกโพสต์เป็น comment ที่แทนที่ตัวเองแทนการต่อกันเป็นตั้ง ยืนยันตัวตนด้วย Workload Identity Federation — หลักการเดียวกับคลัสเตอร์ คือไม่มี JSON key ใน GitHub secret</p>
           <p><strong>ไม่มีขั้น <code>apply</code> โดยเจตนา</strong> PR ถูกอนุมัติจากโค้ด ไม่ใช่จาก plan การ apply อัตโนมัติตอน merge หมายความว่าการเปลี่ยน node pool หรือการเปลี่ยนเลข subnet จะลง production เพราะมีคนชอบ diff</p>
@@ -1124,7 +1136,7 @@ footer {
         <div class="f-desc"><p>output เป็น YAML, เปิด <code>profile_tasks</code> ให้เห็นจำนวน change ท้ายการรัน, SSH pipelining และ ControlPersist ตั้งใจไม่ตั้ง <code>become_ask_pass</code> เพราะรหัสผ่านในไฟล์ config คือ credential ใน Git</p></div>
       </div>
       <div class="file">
-        <div class="f-name">group_vars/all.yml<em>44 บรรทัด</em></div>
+        <div class="f-name">group_vars/all.yml<em>56 บรรทัด</em></div>
         <div class="f-desc"><p>ทุกเวอร์ชัน พอร์ต และ path ไม่มีอะไรที่เป็นเวอร์ชันฮาร์ดโค้ดใน task เพื่อให้การอัปเกรดเป็นการแก้บรรทัดเดียวในที่ที่ review ได้</p></div>
       </div>
       <div class="file">
@@ -1132,7 +1144,7 @@ footer {
         <div class="f-desc"><p>มีแต่โฮสต์ ไม่มี credential มีกลุ่ม <code>[local_test]</code> คอมเมนต์ไว้ และคำสั่ง Multipass สำหรับสร้าง VM ทดสอบฟรี</p></div>
       </div>
       <div class="file">
-        <div class="f-name">requirements.yml<em>13 บรรทัด</em></div>
+        <div class="f-name">requirements.yml<em>21 บรรทัด</em></div>
         <div class="f-desc"><p><code>community.docker</code> และ <code>community.general</code> pin ทั้งคู่ เพราะการอัปเกรด collection เปลี่ยนพฤติกรรมของ module ได้ และ "เดือนที่แล้วมันใช้ได้" ไม่ใช่กลยุทธ์การ deploy</p></div>
       </div>
       <div class="file">
@@ -1152,7 +1164,7 @@ footer {
 
       <div class="group">roles/docker/ — engine + log rotation · 5 ไฟล์</div>
       <div class="file">
-        <div class="f-name">tasks/main.yml<em>85 บรรทัด</em></div>
+        <div class="f-name">tasks/main.yml<em>96 บรรทัด</em></div>
         <div class="f-desc"><p>ใช้ repo ทางการผ่านวิธี <strong>keyring</strong> ที่ <code>apt-key add</code> เลิกใช้แล้วมีเหตุผลที่สำคัญ: มันเชื่อ key นั้นสำหรับ <em>ทุก</em> repository ในเครื่อง ดังนั้น key ของ Docker ที่ถูกยึดจะเซ็นแพ็กเกจตัวแทนของอะไรก็ได้</p></div>
       </div>
       <div class="file">
@@ -1183,7 +1195,7 @@ footer {
 
       <div class="group">roles/node_exporter/ — service ที่ hardened · 5 ไฟล์</div>
       <div class="file">
-        <div class="f-name">tasks/main.yml<em>81 บรรทัด</em></div>
+        <div class="f-name">tasks/main.yml<em>103 บรรทัด</em></div>
         <div class="f-desc">
           <p>สร้าง user แบบ <strong>system และ non-login</strong> เฉพาะ; ดาวน์โหลด binary พร้อม <strong>ตรวจ checksum</strong> — การ pin เวอร์ชันโดยไม่มี checksum ยังเท่ากับเชื่ออะไรก็ตามที่เซิร์ฟเวอร์ส่งมา</p>
           <p>binary เป็นของ <code>root</code> ไม่ใช่ของ <code>node_exporter</code> เพราะ service account ต้องเขียนทับ binary ที่ตัวเองรันไม่ได้ ไม่งั้นการยึดโพรเซสจะกลายเป็นการฝังตัวถาวร</p>
@@ -1217,9 +1229,9 @@ footer {
 
     <div class="files">
       <div class="file">
-        <div class="f-name">check-invariants.sh<em>139 บรรทัด</em></div>
+        <div class="f-name">check-invariants.sh<em>391 บรรทัด</em></div>
         <div class="f-desc">
-          <p>กฎ 7 ข้อที่ครอบทั้งรีโป: ไม่มี <code>:latest</code>, ไม่มี resource ที่เป็น service-account key, ไม่มี <code>kubectl</code> ใน CI, prod ไม่อ้าง <code>docker.io</code>, ไม่มี <code>spec.replicas</code> ฮาร์ดโค้ด, ไม่มี Action ที่ pin กับ ref ที่ขยับได้ และทุกโฟลเดอร์ระดับบนมี README</p>
+          <p>กฎ 12 ข้อที่ครอบทั้งรีโป: ไม่มี <code>:latest</code>, ไม่มี resource ที่เป็น service-account key, ไม่มี <code>kubectl</code> ใน CI, prod ไม่อ้าง <code>docker.io</code>, ไม่มี <code>spec.replicas</code> ฮาร์ดโค้ด, ไม่มี Action ที่ pin กับ ref ที่ขยับได้, ทุกโฟลเดอร์ระดับบนมี README, HTML ที่เปิดเป็นไฟล์ประกาศ charset, ทุก action ref resolve ได้จริง, commit ที่ยังไม่ push ไม่มี skip token หลุด ไม่มี Terraform plan archive ถูก track และตัวเลขจำนวนบรรทัดในหน้านี้ตรงกับไฟล์จริง</p><p>ห้าข้อท้ายมาจากบั๊กจริงทั้งหมด ข้อที่ 9 เคยรายงานว่า ref ทุกตัวใช้ไม่ได้เพราะ curl ติด rate limit — มันสับสนระหว่าง <em>ตรวจไม่ได้</em> กับ <em>ไม่ถูกต้อง</em> ตอนนี้ให้ HTTP status ตัดสิน</p><p>ข้อที่ 12 <strong>จับไฟล์ของตัวเองได้ในรันแรกสุด</strong> — การเพิ่มมันเข้ามาทำให้ <code>check-invariants.sh</code> ยาวขึ้น และหน้านี้ยังบอกความยาวเดิมอยู่ ก่อนหน้านั้นตัวเลขในหน้านี้ผิด 23 จาก 73 ตัว ดริฟต์มาหลายเซสชันโดยไม่มีอะไรมาบอก</p>
           <p>ตอนเขียนแบบ inline ใน workflow มันไปจับชื่อ step ของตัวเองและ grep pattern ของตัวเองแล้ว fail การย้ายออกจากโฟลเดอร์ที่มันสแกนช่วยตัดปัญหานั้น — และเหตุผลที่ดีกว่าคือ <strong>สคริปต์เดียวกันรันบนเครื่องได้</strong> ดังนั้นถ้ารันในเครื่องผ่าน CI ก็จะผ่าน กฎที่ตรวจสอบได้เฉพาะตอน push คือกฎที่คนจะเรียนรู้วิธีเลี่ยง</p>
         </div>
       </div>
@@ -1427,7 +1439,7 @@ footer {
 
   <footer>
     <span>104 ไฟล์</span>
-    <span>3 เสาหลัก · 11 invariant</span>
+    <span>3 เสาหลัก · 12 invariant</span>
     <span>Task 0–8 · รันจริงครบทั้ง 9 ข้อ</span>
     <span>ข้อมูล ณ 4 ก.ย. 2026</span>
   </footer>

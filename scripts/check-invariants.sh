@@ -345,6 +345,44 @@ while IFS= read -r f; do
 done < <(git ls-files)
 check "no Terraform plan archive is tracked" "$planfiles"
 
+# ── 12. Documented line counts are not stale ────────────────────────────────
+# repo-guide.html documents the repository file by file and prints each file's
+# length. Twenty-three of those numbers were wrong at once, drifted across
+# several sessions, and the page reads as authoritative either way. A number
+# nobody checks is worse than no number, because a reader cannot tell a current
+# one from a stale one.
+#
+# The work is in scripts/check-doc-counts.py. Finding an interpreter is the
+# fiddly part and the reason this block is longer than it looks: on the
+# development machine `python3` is the Microsoft Store stub, which `command -v`
+# finds happily and which then exits 49 without running anything. Invariant 11
+# was silently PASSing for exactly that reason, with `2>/dev/null` hiding the
+# error. So each candidate is tested by actually running it, and if none works
+# this reports SKIP rather than PASS. A check that cannot run must never look
+# like a check that found nothing.
+PYBIN=""
+for cand in python3 python py; do
+    if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'print(1)' >/dev/null 2>&1; then
+        PYBIN="$cand"
+        break
+    fi
+done
+
+if [ -z "$PYBIN" ]; then
+    printf '  %sSKIP%s  documented line counts match the files (no working Python)\n' "$RED" "$RESET"
+elif [ ! -f repo-guide.html ]; then
+    printf '  %sSKIP%s  documented line counts match the files (repo-guide.html absent)\n' "$RED" "$RESET"
+else
+    countout="$(PYTHONIOENCODING=utf-8 "$PYBIN" scripts/check-doc-counts.py 2>&1)" && countrc=0 || countrc=$?
+    if [ "$countrc" -eq 0 ]; then
+        pass "documented line counts match the files"
+    else
+        fail "documented line counts match the files"
+        printf '%s\n' "$countout" | sed 's/^/          /'
+        printf '          %s\n' "fix: $PYBIN scripts/check-doc-counts.py --apply"
+    fi
+fi
+
 echo
 if [ "$FAILED" -ne 0 ]; then
     echo "One or more invariants failed."

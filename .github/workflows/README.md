@@ -5,7 +5,7 @@ Two pipelines with deliberately different endings.
 | | `ci.yaml` | `terraform.yaml` |
 |---|---|---|
 | Triggered by | `app/` `docker/` `k8s/base/` `scripts/` … | `infra/terraform/**` |
-| Gates | tests · gosec · govulncheck · 11 invariants · gitleaks · kubeconform · Trivy IaC · Trivy image · **ZAP baseline** | `fmt` · `validate` · `plan` |
+| Gates | tests · gosec · govulncheck · 12 invariants · gitleaks · kubeconform · Trivy IaC · Trivy image · **ZAP baseline** | `fmt` · `validate` · `plan` |
 | Ends with | a Git commit — ArgoCD does the rest, unattended | **a plan for a human to read** |
 | Touches the cluster | never | never |
 
@@ -160,7 +160,7 @@ pull_request            : approvals=1, code owner review=true
 required_status_checks  : Lint & test · Repository invariants · Build, scan, push
 ```
 
-Why it matters here specifically: the Trivy gates, the eleven invariants, gosec,
+Why it matters here specifically: the Trivy gates, the twelve invariants, gosec,
 govulncheck and gitleaks all live in this directory and in `scripts/`. Whoever can
 push can also switch any of them off in a one-line diff that looks small, so the
 review boundary is what protects the other gates.

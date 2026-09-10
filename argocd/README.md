@@ -13,7 +13,7 @@ apps/observability.yaml              4 Helm Applications, sync-wave ordered
 developer merges to main
         │
         ▼
-GitHub Actions (CI)  ── test → build → trivy → push image to Docker Hub
+GitHub Actions (CI)  ── test → build → scan → DAST → push image to Docker Hub
         │                                   ── kustomize edit set image
         │                                   ── commit + push manifest change
         ▼

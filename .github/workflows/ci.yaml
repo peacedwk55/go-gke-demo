@@ -177,7 +177,7 @@ jobs:
           # unnoticed — which is the case that matters most.
           fetch-depth: 0
 
-      # All eleven invariants live in scripts/check-invariants.sh rather than
+      # All twelve invariants live in scripts/check-invariants.sh rather than
       # inline here, for two reasons.
       #
       # The "no kubectl in CI" check greps .github/workflows/. Written inline it
