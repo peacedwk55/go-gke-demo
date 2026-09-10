@@ -74,7 +74,17 @@ concurrency:
 env:
   GO_VERSION: "1.26"
   IMAGE_NAME: go-sample-app
-  TRIVY_VERSION: "0.74.0"
+  # Referenced by every Trivy step below via ${{ env.TRIVY_VERSION }}. It was
+  # previously declared here as "0.74.0" and never read — all three steps
+  # hardcoded "v0.74.0" — so bumping this line would have changed nothing while
+  # looking like it had. Note the `v`: the action wants the tag, not the number.
+  TRIVY_VERSION: "v0.74.0"
+  # Pinned like everything else, and each one checked against its GitHub
+  # releases API before being written here — the trivy-action incident was a
+  # version string that simply did not exist, and it cost two red runs to find.
+  GOVULNCHECK_VERSION: "v1.1.4"
+  GOSEC_VERSION: "v2.29.0"
+  GITLEAKS_VERSION: "v8.30.1"
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
@@ -116,6 +126,39 @@ jobs:
         working-directory: app
         run: go tool cover -func=coverage.out | tail -1
 
+      # ── SCA: vulnerabilities in dependencies we actually CALL ─────────────
+      #
+      # Not the same job as the Trivy image scan. Trivy reads the built image
+      # and finds OS packages and modules that are PRESENT. govulncheck does
+      # reachability analysis on the source: it reports a CVE only when our code
+      # can actually reach the vulnerable function.
+      #
+      # That difference is the value. A CVE in a module we import but never call
+      # on the affected path is noise, and noise is what teaches people to
+      # ignore the scanner.
+      - name: govulncheck — CVEs on reachable code paths
+        working-directory: app
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }}
+          govulncheck ./...
+
+      # ── SAST: our own source, not somebody else's package ────────────────
+      #
+      # Worth being precise, because this repository looked like it had SAST and
+      # did not. Trivy image = container scanning. Trivy config = IaC scanning.
+      # `go vet` = a correctness linter. None of them read our handlers looking
+      # for injection, path traversal or a hardcoded credential.
+      #
+      # It matters here specifically: §1.1 exists because the sample app
+      # reflected `?name=` unescaped, and the fix is two response headers. Tests
+      # assert those headers, which is good — but nothing in this pipeline would
+      # have objected to the original hole.
+      - name: gosec — SAST over our own source
+        working-directory: app
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@${{ env.GOSEC_VERSION }}
+          gosec -severity medium -confidence medium ./...
+
   # ───────────────────────────────────────────────────────────────────────────
   # 2. Repository invariants — cheap checks that catch expensive mistakes.
   # ───────────────────────────────────────────────────────────────────────────
@@ -124,8 +167,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks below scans HISTORY, not just the working tree. The default
+          # shallow clone would let a secret committed and then removed pass
+          # unnoticed — which is the case that matters most.
+          fetch-depth: 0
 
-      # All seven invariants live in scripts/check-invariants.sh rather than
+      # All eleven invariants live in scripts/check-invariants.sh rather than
       # inline here, for two reasons.
       #
       # The "no kubectl in CI" check greps .github/workflows/. Written inline it
@@ -145,6 +193,28 @@ jobs:
           # automatic token raises it to 5000/hour and needs no configuration.
           GITHUB_TOKEN: ${{ github.token }}
         run: ./scripts/check-invariants.sh
+
+      # ── Secret scanning over the full history ────────────────────────────
+      #
+      # The cross-cutting DoD says "No secret material anywhere in Git history
+      # (verify with gitleaks before submitting)". Until now that verification
+      # was a thing someone remembered to run by hand, which is not a gate.
+      #
+      # Run as a container rather than through gitleaks-action: one less action
+      # ref to resolve (invariant 9 exists because a deleted upstream tag broke
+      # this pipeline twice), and no licence question about the Action on
+      # organisation repositories.
+      #
+      # Known limitation, stated because it already bit this repository: gitleaks
+      # reads text. A Terraform plan archive stores its entries zip-compressed,
+      # so a state snapshot and an IP address sat in history for days while
+      # gitleaks reported clean. Invariant 11 covers that case by looking inside
+      # tracked archives; this step covers everything that is text.
+      - name: gitleaks — secret scan over full history
+        run: >-
+          docker run --rm -v "$PWD:/repo"
+          "zricethezav/gitleaks:${{ env.GITLEAKS_VERSION }}"
+          detect --source=/repo --no-banner --redact --exit-code 1
 
       - name: Render and validate manifests
         run: |
@@ -167,7 +237,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: config
-          version: v0.74.0
+          version: ${{ env.TRIVY_VERSION }}
           # `rendered/`, NOT the source tree, and this matters.
           #
           # Scanning k8s/ directly makes Trivy read each file in
@@ -238,7 +308,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-          version: v0.74.0
+          version: ${{ env.TRIVY_VERSION }}
           format: table
           severity: CRITICAL
           exit-code: "1"
@@ -256,7 +326,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-          version: v0.74.0
+          version: ${{ env.TRIVY_VERSION }}
           format: table
           severity: HIGH
           exit-code: "0"

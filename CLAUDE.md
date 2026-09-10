@@ -362,6 +362,19 @@ commit+push manifest change → ArgoCD detects → sync → GKE pulls via AR
 - **Write-back credential (the manifest-bump commit needs one — the default `GITHUB_TOKEN` triggers no re-run and may be blocked by branch protection):** use a **GitHub App** installation token (preferred) or a fine-grained PAT with `contents:write` scoped to this repo only, stored as a repo secret. Branch protection on `main` stays ON; the bot goes in the protection rule's **bypass list** (or pushes to a `release/bump` branch with auto-merge if bypass is not allowed by org policy). Document the chosen path in the workflow README.
   - **⚠️ Not yet true of this repository, and worth saying so rather than leaving the sentence above to imply otherwise.** As built: branch protection is **not configured** (`GET /branches/main` reports `protected: false`), no pull request has ever been opened, and every commit on `main` was pushed directly. So there is **no human review gate on the application path at all** — the only human gate in the system is on the infra path, where a person reads `terraform plan` before applying, and that reviews infrastructure impact rather than code.
   - This is a consequence of one person building the whole thing, not a design position, and it leaves a real hole: the Trivy gate, the eleven invariants and the "no kubectl in CI" rule all live in `.github/workflows/` and `scripts/`, so whoever can push can also switch them off in a one-line diff that looks small.
+  - **Since resolved.** The ruleset is now active and verified against the API,
+    not the settings screen: `protected: true`, deletions restricted, force
+    pushes blocked, `approvals=1` with code-owner review required, and three
+    required status checks. `Repository admin` sits in the bypass list because
+    the bump commit pushes straight to `main` with a PAT owned by the only human,
+    which makes the ruleset **advisory for that person and enforcing for everyone
+    else** — a Deploy key or a GitHub App is what would make it enforcing for
+    them too, and `.github/workflows/README.md` records both routes.
+  - Two things the first pull request taught, both written up in that README: a
+    required status check must be one that runs on *every* PR (a path-filtered
+    workflow like `terraform.yaml` blocks unrelated PRs forever), and
+    `approvals=1` is unsatisfiable on a single-author repository because GitHub
+    does not let anyone approve their own PR.
   - `.github/CODEOWNERS` now records the intended ownership boundary — app code and overlay values to the app team, pipeline / infra / base manifests / the gates themselves to platform. **CODEOWNERS enforces nothing on its own**: it applies only where a pull request is required and reviews are enforced, so switching branch protection on is the step that gives it effect. Steps in `.github/workflows/README.md`.
 - Docker Hub creds via repository secrets only. Optional bonus: keyless **cosign** signing.
 - Separate `terraform.yaml` workflow: fmt/validate/plan as PR checks (plan output as PR comment; apply manual/protected).

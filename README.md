@@ -430,6 +430,16 @@ corrected automatically. Worth it under regulation; not worth it here, where a
 bad deploy is forty seconds and one `git revert` from undone — measured, 13,437
 requests with none dropped.
 
+**No DAST, and no image signing.** The pipeline now has unit tests, SAST
+(`gosec`), reachability-based dependency scanning (`govulncheck`), secret scanning
+over full history (`gitleaks`), IaC scanning and container scanning — but nothing
+exercises the application while it is running, and nothing signs what it ships.
+DAST needs a deployed target, which this pipeline deliberately has no credentials
+to reach; it belongs against the dev overlay in a throwaway cluster, not in a
+workflow that holds no kubeconfig. Signing is keyless cosign plus a policy
+controller refusing unsigned images, which closes the loop between "CI built it"
+and "the cluster will run it" — roughly a day, and the natural next increment.
+
 **No Ingress, Gateway or TLS.** The Service is `ClusterIP`. Doing this properly means an Ingress or
 HTTPRoute plus cert-manager and a WAF policy — a task of its own. A `LoadBalancer` Service was the
 available shortcut: a billable external IP serving plaintext HTTP with no policy in front. Not used
