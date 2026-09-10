@@ -281,13 +281,15 @@ footer {
     <div class="eyebrow">Go → GKE · lifecycle</div>
     <h1>เส้นทางของหนึ่ง commit</h1>
     <p class="thesis">
-      commit เดียวเดินได้สองเส้น และ<b>มีประตูที่ต้องใช้คนอยู่เส้นเดียว</b> —
-      ไม่ใช่เพราะลืมใส่ในอีกเส้น แต่เพราะ<b>ราคาของการแก้กลับไม่เท่ากัน</b>
+      commit เดียวเดินได้สองเส้น ทั้งคู่มีคนรีวิวก่อน merge —
+      ที่ต่างกันคือ <b>merge แล้วหมายความว่าอะไร</b>
+      เส้นแอป merge แล้วขึ้น production เอง ส่วนเส้น infra
+      <b>merge แล้วยังไม่มีอะไรเกิดขึ้น</b> จนมีคนอ่าน plan แล้วสั่ง apply
     </p>
 
     <div class="chips">
-      <div class="chip ok"><b>10</b><span>ประตูอัตโนมัติ<br>ไม่ต้องรอคน</span></div>
-      <div class="chip hum"><b>1</b><span>ประตูมนุษย์<br>อยู่เส้น infra</span></div>
+      <div class="chip ok"><b>14</b><span>ประตูอัตโนมัติ<br>ไม่ต้องรอคน</span></div>
+      <div class="chip hum"><b>2</b><span>ประตูมนุษย์<br>review · อ่าน plan</span></div>
       <div class="chip ok"><b>0</b><span>credential ของคลัสเตอร์<br>ที่ CI ถือไว้</span></div>
       <div class="chip ok"><b>0/13,437</b><span>request หลุด<br>ตอน rollback</span></div>
     </div>
@@ -295,7 +297,7 @@ footer {
 
   <!-- ═════════════════════ FIGURE 1 ═════════════════════ -->
   <section>
-    <h2>เส้นทางแยกที่จุดเริ่ม ไม่ใช่ตอนท้าย</h2>
+    <h2>ประตูรีวิวอยู่ร่วมกัน เส้นทางแยกหลังจากนั้น</h2>
     <p class="lede">
       ตัวที่ตัดสินว่าจะเดินเส้นไหนคือ <code>paths</code> filter ใน workflow —
       แตะ <code>app/</code> <code>docker/</code> <code>k8s/</code> เข้าเส้นแอป ·
@@ -304,8 +306,8 @@ footer {
 
     <figure>
       <div class="canvas">
-        <svg viewBox="0 0 940 616" role="img"
-             aria-label="ผังเส้นทางของหนึ่ง commit แยกเป็นสองเส้น เส้นแอปผ่านห้าประตูอัตโนมัติแล้ว ArgoCD นำไป deploy เองโดยไม่มีคนอนุมัติ เส้น infra ผ่าน fmt validate plan แล้วหยุดรอคนอ่าน plan ก่อนจะ apply">
+        <svg viewBox="0 0 940 724" role="img"
+             aria-label="ผังเส้นทางของหนึ่ง commit ทั้งสองเส้นผ่านประตูรีวิวของคนก่อน merge แล้วจึงแยกกัน เส้นแอป merge แล้วขึ้น production เอง เส้น infra merge แล้วยังไม่มีอะไรเกิดขึ้นจนมีคนอ่าน plan แล้วสั่ง apply">
           <defs>
             <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -313,135 +315,134 @@ footer {
             </marker>
           </defs>
 
-          <!-- push -->
           <rect x="368" y="10" width="204" height="42" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
           <text class="s-strong" x="470" y="31" text-anchor="middle">developer push</text>
-          <text class="s-sub" x="470" y="45" text-anchor="middle">แก้ไฟล์อะไร = เดินเส้นไหน</text>
+          <text class="s-sub" x="470" y="45" text-anchor="middle">branch ใหม่ — ห้าม push ตรงเข้า main</text>
 
-          <!-- split -->
-          <g color="var(--faint)">
-            <path d="M 440 52 L 230 78" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
-            <path d="M 500 52 L 710 78" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          <g color="var(--copper)">
+            <path d="M 470 52 L 470 72" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
           </g>
 
-          <!-- ══ LEFT LANE: app ══ -->
-          <text class="s-lane" x="30" y="96">เส้นแอป · ci.yaml</text>
-          <rect x="26" y="104" width="404" height="1" fill="var(--verdigris)" opacity=".5"></rect>
+          <rect x="268" y="74" width="404" height="72" rx="3"
+                fill="var(--copper-wash)" stroke="var(--copper)" stroke-width="1.6"></rect>
+          <text class="s-lane" x="284" y="95" fill="var(--copper)">ประตูมนุษย์ 1 — ทั้งสองเส้น</text>
+          <text class="s-strong" x="284" y="117">pull request + review ตาม CODEOWNERS</text>
+          <text class="s-sub" x="284" y="134">3 status check ต้องเขียว · ruleset บังคับ</text>
 
-          <!-- gates box -->
-          <rect x="26" y="116" width="404" height="150" rx="3"
+          <g color="var(--faint)">
+            <path d="M 400 146 L 232 176" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 540 146 L 708 176" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <text class="s-lane" x="30" y="196">เส้นแอป · merge = ขึ้น production</text>
+          <rect x="26" y="204" width="404" height="1" fill="var(--verdigris)" opacity=".5"></rect>
+
+          <rect x="26" y="216" width="404" height="150" rx="3"
                 fill="var(--verd-wash)" stroke="var(--verdigris)" stroke-opacity=".35"></rect>
-          <text class="s-strong" x="42" y="136">5 ประตูอัตโนมัติ — ไม่ผ่านคือจบ</text>
-          <text class="s-sub" x="42" y="157">gofmt · go vet · go test -race  → 9 เทสต์</text>
-          <text class="s-sub" x="42" y="176">11 repository invariants</text>
-          <text class="s-sub" x="42" y="195">kustomize build → kubeconform -strict</text>
-          <text class="s-sub" x="42" y="214">Trivy IaC บน manifest ที่ render แล้ว</text>
-          <text class="s-sub" x="42" y="233">Trivy image · CRITICAL · --ignore-unfixed</text>
-          <text class="s-note" x="42" y="255">ลำดับสำคัญ: สแกน<tspan font-weight="600">ก่อน</tspan> push</text>
+          <text class="s-strong" x="42" y="236">ประตูอัตโนมัติใน ci.yaml</text>
+          <text class="s-sub" x="42" y="257">gofmt · go vet · go test -race → 9 เทสต์</text>
+          <text class="s-sub" x="42" y="276">govulncheck — CVE ที่โค้ดเรียกถึงจริง</text>
+          <text class="s-sub" x="42" y="295">gosec — SAST อ่านโค้ดเราเอง</text>
+          <text class="s-sub" x="42" y="314">11 invariants · gitleaks ทั้ง history</text>
+          <text class="s-sub" x="42" y="333">kubeconform · Trivy IaC · Trivy image</text>
+          <text class="s-note" x="42" y="355">สแกน<tspan font-weight="600">ก่อน</tspan> push — ลำดับนี้สำคัญ</text>
 
           <g color="var(--faint)">
-            <path d="M 228 266 L 228 288" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 228 366 L 228 388" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="26" y="290" width="404" height="42" rx="3"
+          <rect x="26" y="390" width="404" height="42" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="42" y="308">push image → Docker Hub</text>
-          <text class="s-sub" x="42" y="324">tag = sha-&lt;commit&gt; · ไม่มี latest</text>
+          <text class="s-node" x="42" y="408">push image → Docker Hub</text>
+          <text class="s-sub" x="42" y="424">tag = sha-&lt;commit&gt; · ไม่มี latest</text>
 
           <g color="var(--faint)">
-            <path d="M 228 332 L 228 354" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 228 432 L 228 454" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="26" y="356" width="404" height="42" rx="3"
+          <rect x="26" y="456" width="404" height="42" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="42" y="374">CI commit tag กลับเข้า Git</text>
-          <text class="s-sub" x="42" y="390">[skip ci] กัน loop · เขียนออกนอกได้แค่นี้</text>
+          <text class="s-node" x="42" y="474">CI commit tag กลับเข้า Git</text>
+          <text class="s-sub" x="42" y="490">bot อยู่ใน bypass list — ไม่งั้นสายนี้ขาด</text>
 
           <g color="var(--faint)">
-            <path d="M 228 398 L 228 420" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 228 498 L 228 520" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="26" y="422" width="404" height="42" rx="3"
+          <rect x="26" y="522" width="404" height="42" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="42" y="440">ArgoCD ในคลัสเตอร์ดึงเอง</text>
-          <text class="s-sub" x="42" y="456">poll ~3 นาที · AppProject จำกัด ns ปลายทาง</text>
+          <text class="s-node" x="42" y="540">ArgoCD ในคลัสเตอร์ดึงเอง</text>
+          <text class="s-sub" x="42" y="556">AppProject จำกัด repo และ namespace</text>
 
           <g color="var(--faint)">
-            <path d="M 228 464 L 228 486" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 228 564 L 228 586" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="26" y="488" width="404" height="42" rx="3"
+          <rect x="26" y="588" width="404" height="42" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="42" y="506">admission: Pod Security restricted</text>
-          <text class="s-sub" x="42" y="522">pod ที่ securityContext ไม่ครบถูกปฏิเสธ</text>
+          <text class="s-node" x="42" y="606">admission: Pod Security restricted</text>
+          <text class="s-sub" x="42" y="622">securityContext ไม่ครบ = ถูกปฏิเสธ</text>
 
           <g color="var(--verdigris)">
-            <path d="M 228 530 L 228 552" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
+            <path d="M 228 630 L 228 652" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
           </g>
-          <rect x="26" y="554" width="404" height="40" rx="3"
+          <rect x="26" y="654" width="404" height="40" rx="3"
                 fill="var(--verd-wash)" stroke="var(--verdigris)" stroke-opacity=".5"></rect>
-          <text class="s-strong" x="228" y="573" text-anchor="middle" fill="var(--verdigris)">pod รับ traffic — ไม่มีใครกดอนุมัติ</text>
-          <text class="s-sub" x="228" y="587" text-anchor="middle">rolling update · maxUnavailable 0</text>
+          <text class="s-strong" x="228" y="673" text-anchor="middle" fill="var(--verdigris)">pod รับ traffic</text>
+          <text class="s-sub" x="228" y="687" text-anchor="middle">หลัง merge ไม่มีใครต้องกดอะไรอีก</text>
 
-          <!-- ══ RIGHT LANE: infra ══ -->
-          <text class="s-lane" x="510" y="96">เส้น infra · terraform.yaml</text>
-          <rect x="506" y="104" width="404" height="1" fill="var(--copper)" opacity=".5"></rect>
+          <text class="s-lane" x="510" y="196">เส้น infra · merge = ยังไม่เกิดอะไร</text>
+          <rect x="506" y="204" width="404" height="1" fill="var(--copper)" opacity=".5"></rect>
 
-          <rect x="506" y="116" width="404" height="60" rx="3"
+          <rect x="506" y="216" width="404" height="60" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="522" y="136">fmt -check · validate</text>
-          <text class="s-sub" x="522" y="152">init -backend=false → ไม่ต้องมี credential</text>
-          <text class="s-sub" x="522" y="168">รันได้แม้ PR มาจาก fork</text>
+          <text class="s-node" x="522" y="236">fmt -check · validate</text>
+          <text class="s-sub" x="522" y="252">init -backend=false → ไม่ต้องมี credential</text>
+          <text class="s-sub" x="522" y="268">รันได้แม้ PR มาจาก fork</text>
 
           <g color="var(--faint)">
-            <path d="M 708 176 L 708 198" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 708 276 L 708 298" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="506" y="200" width="404" height="66" rx="3"
+          <rect x="506" y="300" width="404" height="66" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="522" y="220">plan — อ่าน state จริง</text>
-          <text class="s-sub" x="522" y="236">auth ด้วย Workload Identity Federation</text>
-          <text class="s-sub" x="522" y="252">สิทธิ์อ่านเท่านั้น · โพสต์ผลเป็น PR comment</text>
+          <text class="s-node" x="522" y="320">plan — อ่าน state จริง</text>
+          <text class="s-sub" x="522" y="336">Workload Identity Federation · ไม่มีไฟล์ key</text>
+          <text class="s-sub" x="522" y="352">สิทธิ์อ่านเท่านั้น · โพสต์ผลเป็น PR comment</text>
 
           <g color="var(--copper)">
-            <path d="M 708 266 L 708 288" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
+            <path d="M 708 366 L 708 388" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
           </g>
-
-          <!-- THE human gate -->
-          <rect x="506" y="290" width="404" height="86" rx="3"
+          <rect x="506" y="390" width="404" height="86" rx="3"
                 fill="var(--copper-wash)" stroke="var(--copper)" stroke-width="1.6"></rect>
-          <text class="s-lane" x="522" y="311" fill="var(--copper)">ประตูมนุษย์ — เส้นนี้เท่านั้น</text>
-          <text class="s-strong" x="522" y="333">คนอ่าน plan</text>
-          <text class="s-sub" x="522" y="350">มองหา must be replaced / forces replacement</text>
-          <text class="s-sub" x="522" y="366">merge แล้ว GCP ยัง<tspan font-weight="600">ไม่เปลี่ยนอะไรเลย</tspan></text>
+          <text class="s-lane" x="522" y="411" fill="var(--copper)">ประตูมนุษย์ 2 — เส้นนี้เท่านั้น</text>
+          <text class="s-strong" x="522" y="433">คนอ่าน plan</text>
+          <text class="s-sub" x="522" y="450">มองหา must be replaced / forces replacement</text>
+          <text class="s-sub" x="522" y="466">merge แล้ว GCP ยัง<tspan font-weight="600">ไม่เปลี่ยนอะไรเลย</tspan></text>
 
           <g color="var(--copper)">
-            <path d="M 708 376 L 708 398" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
+            <path d="M 708 476 L 708 498" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
           </g>
-
-          <rect x="506" y="400" width="404" height="60" rx="3"
+          <rect x="506" y="500" width="404" height="60" rx="3"
                 fill="var(--surface-2)" stroke="var(--rule)"></rect>
-          <text class="s-node" x="522" y="420">คนพิมพ์ apply เอง</text>
-          <text class="s-sub" x="522" y="436">terraform apply tfplan — plan ที่อ่านมาแล้ว</text>
-          <text class="s-sub" x="522" y="452">CI ไม่มีสิทธิ์ apply เลย</text>
+          <text class="s-node" x="522" y="520">คนพิมพ์ apply เอง</text>
+          <text class="s-sub" x="522" y="536">terraform apply tfplan — plan ที่อ่านมาแล้ว</text>
+          <text class="s-sub" x="522" y="552">identity ของ CI ไม่มีสิทธิ์ apply เลย</text>
 
           <g color="var(--copper)">
-            <path d="M 708 460 L 708 482" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
+            <path d="M 708 560 L 708 582" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
           </g>
-          <rect x="506" y="484" width="404" height="40" rx="3"
+          <rect x="506" y="584" width="404" height="40" rx="3"
                 fill="var(--copper-wash)" stroke="var(--copper)" stroke-opacity=".5"></rect>
-          <text class="s-strong" x="708" y="503" text-anchor="middle" fill="var(--copper)">GCP เปลี่ยน · state ถูกล็อก</text>
-          <text class="s-sub" x="708" y="517" text-anchor="middle">เขียน state กลับ GCS</text>
+          <text class="s-strong" x="708" y="603" text-anchor="middle" fill="var(--copper)">GCP เปลี่ยน · state ถูกล็อก</text>
+          <text class="s-sub" x="708" y="617" text-anchor="middle">เขียน state กลับ GCS</text>
 
-          <text class="s-note" x="506" y="548">ถ้า output เปลี่ยน (เช่น image_repository, ksa_annotation)</text>
-          <text class="s-note" x="506" y="566">ต้องเติมค่ากลับใน manifest แล้วเข้าเส้นแอปต่อ — พึ่งพาทางเดียว</text>
+          <text class="s-note" x="506" y="648">ถ้า output เปลี่ยน (image_repository, ksa_annotation)</text>
+          <text class="s-note" x="506" y="666">ต้องเติมค่ากลับใน manifest แล้วเข้าเส้นแอปต่อ — พึ่งพาทางเดียว</text>
         </svg>
       </div>
       <figcaption>
-        <b>ประตูทั้งสิบข้างซ้ายไม่มีมนุษย์อยู่เลย</b> ตั้งใจให้เป็นอย่างนั้น — pod ใหม่ที่ไม่ผ่าน readiness
-        ทำให้ rollout หยุดเอง และ <code>git revert</code> แก้กลับได้ในนาทีเดียว
-        ส่วนข้างขวาหยุดรอคนทุกครั้ง เพราะ <code>terraform destroy</code> ที่พลาดไม่มีอะไรมาหยุดให้
+        <b>ทั้งสองเส้นมีคนรีวิวก่อน merge — ที่ต่างกันคือ merge แล้วหมายความว่าอะไร</b>
+        เส้นแอป merge แล้วไม่มีใครต้องกดอะไรอีก เพราะ pod ที่ไม่ผ่าน readiness ทำให้ rollout
+        หยุดเอง และ <code>git revert</code> แก้กลับได้ในนาทีเดียว
+        เส้น infra merge แล้ว GCP ยังไม่เปลี่ยนอะไร — ต้องมีคนอ่าน plan อีกชั้น
+        เพราะ <code>terraform destroy</code> ที่พลาดไม่มีอะไรมาหยุดให้
       </figcaption>
     </figure>
   </section>
@@ -452,6 +453,7 @@ footer {
     <p class="lede">
       ประตูที่ไม่เคยปฏิเสธอะไรก็ยังไม่รู้ว่าใช้ได้จริงไหม —
       ช่องขวาจึงบันทึกเฉพาะสิ่งที่<b>เกิดขึ้นจริงในโปรเจกต์นี้</b> ไม่ใช่สิ่งที่มันควรจะจับได้
+      <br><b>SAST เพิ่งถูกเพิ่ม และยิงในรันแรกสุด</b> — บนบรรทัดเดียวกับที่ §1.1 เขียนขึ้นมาเพื่อแก้
     </p>
 
     <div class="tbl-wrap">
@@ -470,6 +472,18 @@ footer {
             <td class="who">GitHub Actions</td>
             <td><span class="tag auto">อัตโนมัติ</span></td>
             <td class="none">ยังไม่เคย — 9 เทสต์ผ่านมาตลอด</td>
+          </tr>
+          <tr>
+            <td><code>gosec</code> — SAST อ่านซอร์สของเราเอง</td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="caught"><b>G705 (CWE-79) XSS ที่ <code>server.go:149</code></b> — จับได้ในรันแรกสุด บนบรรทัดที่ §1.1 มีอยู่เพราะมัน</td>
+          </tr>
+          <tr>
+            <td><code>govulncheck</code> — CVE ที่โค้ดเรียกถึงจริง</td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ยังไม่เคย — ไม่มี CVE ที่ reachable</td>
           </tr>
           <tr>
             <td>11 repository invariants</td>
@@ -496,10 +510,16 @@ footer {
             <td class="none">ยังไม่เคย — distroless ทำให้เหลือช่องโหว่ 0</td>
           </tr>
           <tr>
-            <td>branch protection บน <code>main</code></td>
-            <td class="who">GitHub</td>
+            <td><code>gitleaks</code> — สแกน secret ทั้ง history</td>
+            <td class="who">GitHub Actions</td>
             <td><span class="tag auto">อัตโนมัติ</span></td>
-            <td class="none">bot ที่ bump tag อยู่ใน bypass list</td>
+            <td class="none">ยังไม่เคย — ทั้ง history สะอาด · แต่มันอ่านแต่ text จึงไม่เห็น zip ที่บีบอัด (invariant 11 ครอบกรณีนั้น)</td>
+          </tr>
+          <tr class="human">
+            <td><b>pull request + review ตาม CODEOWNERS</b></td>
+            <td class="who"><b>มนุษย์</b></td>
+            <td><span class="tag man">ต้องใช้คน</span></td>
+            <td class="caught">ยังไม่เคยปฏิเสธโค้ด — แต่ <b>PR แรกเปิดเผยว่า required check ที่เป็น path-filtered workflow บล็อก merge ตลอดไป</b> และ <code>approvals=1</code> ทำไม่ได้บนรีโปที่มีคนเดียว เพราะ GitHub ไม่ให้อนุมัติ PR ตัวเอง</td>
           </tr>
           <tr>
             <td><code>AppProject</code> — จำกัด repo ต้นทางและ namespace ปลายทาง</td>
@@ -669,7 +689,7 @@ Plan: 1 to add, 1 to destroy</pre>
 
   <footer>
     <span>Task 0–8 · รันจริงครบทุกข้อ</span>
-    <span>10 ประตูอัตโนมัติ · 1 ประตูมนุษย์</span>
+    <span>14 ประตูอัตโนมัติ · 2 ประตูมนุษย์</span>
     <span>0 service account key</span>
     <span>ข้อมูล ณ 10 ก.ย. 2026</span>
   </footer>
