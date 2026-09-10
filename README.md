@@ -75,6 +75,7 @@ attacker gets the ability to make a reviewable, revertible commit — not cluste
 | [scripts/](scripts/) | — | Repository invariants, cluster bootstrap, port-forward every UI |
 | [EVIDENCE.md](EVIDENCE.md) | — | What the live clusters actually proved, with the commands that produced it |
 | [RUNBOOK.md](RUNBOOK.md) | — | Bring the demo up, look at it, tear it down — in the order that works |
+| [lifecycle.html](lifecycle.html) | — | One commit's two paths, every gate, and the single one that waits for a human |
 
 Every directory has its own `README.md` covering the decisions specific to it. This file covers what
 spans them.

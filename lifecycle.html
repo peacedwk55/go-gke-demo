@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>เส้นทางของหนึ่ง commit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ─── tokens: ชุดเดียวกับ repo-guide.html และ project-overview.html ─────── */
+:root {
+  --ground:      #F1F4F5;
+  --surface:     #FFFFFF;
+  --surface-2:   #F7F9FA;
+  --ink:         #171C20;
+  --ink-soft:    #3A464E;
+  --muted:       #66757D;
+  --faint:       #93A2AA;
+  --rule:        #DBE2E6;
+  --rule-soft:   #E9EEF0;
+  --copper:      #A85B27;
+  --copper-wash: #FBF0E7;
+  --verdigris:   #1F6E60;
+  --verd-wash:   #E7F2EF;
+  --shadow:      0 1px 2px rgba(23,28,32,.05), 0 10px 28px -14px rgba(23,28,32,.16);
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans Thai", "IBM Plex Sans", ui-sans-serif, system-ui, "Leelawadee UI", sans-serif;
+  --disp: "Anuphan", "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #12171A;
+    --surface:     #191F23;
+    --surface-2:   #1E252A;
+    --ink:         #E6ECEF;
+    --ink-soft:    #C4CFD5;
+    --muted:       #8B9BA3;
+    --faint:       #6B7C85;
+    --rule:        #2B343A;
+    --rule-soft:   #232B31;
+    --copper:      #D08A50;
+    --copper-wash: #2A1E14;
+    --verdigris:   #58B49F;
+    --verd-wash:   #12241F;
+    --shadow:      0 1px 2px rgba(0,0,0,.30), 0 12px 30px -14px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #12171A;
+  --surface:     #191F23;
+  --surface-2:   #1E252A;
+  --ink:         #E6ECEF;
+  --ink-soft:    #C4CFD5;
+  --muted:       #8B9BA3;
+  --faint:       #6B7C85;
+  --rule:        #2B343A;
+  --rule-soft:   #232B31;
+  --copper:      #D08A50;
+  --copper-wash: #2A1E14;
+  --verdigris:   #58B49F;
+  --verd-wash:   #12241F;
+  --shadow:      0 1px 2px rgba(0,0,0,.30), 0 12px 30px -14px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 40px 22px 72px; }
+
+/* ─── masthead ────────────────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  font-family: var(--disp);
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -.015em;
+  margin: 10px 0 0;
+  text-wrap: balance;
+}
+.thesis {
+  margin: 16px 0 0;
+  max-width: 60ch;
+  font-size: 16.5px;
+  color: var(--ink-soft);
+}
+.thesis b { color: var(--ink); font-weight: 600; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+.chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+.chip b {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.chip span { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.chip.ok b { color: var(--verdigris); }
+.chip.hum b { color: var(--copper); }
+
+/* ─── sections ────────────────────────────────────────────────────────── */
+section { margin-top: 54px; }
+h2 {
+  font-family: var(--disp);
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.lede {
+  margin: 8px 0 0;
+  max-width: 68ch;
+  color: var(--ink-soft);
+}
+.lede code, td code, .note code, li code {
+  font-family: var(--mono);
+  font-size: .88em;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  padding: .06em .34em;
+}
+
+/* ─── figures ─────────────────────────────────────────────────────────── */
+figure {
+  margin: 22px 0 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.canvas { overflow-x: auto; padding: 20px 20px 6px; }
+figure svg { display: block; width: 100%; min-width: 720px; height: auto; }
+figcaption {
+  padding: 13px 20px 16px;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.62;
+}
+figcaption b { color: var(--ink-soft); font-weight: 600; }
+
+/* svg text roles */
+.s-node  { font-family: var(--sans); font-size: 12.5px; font-weight: 500; fill: var(--ink); }
+.s-sub   { font-family: var(--mono); font-size: 11px;   fill: var(--muted); }
+.s-lane  { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; fill: var(--muted); }
+.s-note  { font-family: var(--sans); font-size: 12px;   fill: var(--muted); }
+.s-strong{ font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--ink); }
+.s-num   { font-family: var(--mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ─── gate table ──────────────────────────────────────────────────────── */
+.tbl-wrap {
+  margin-top: 22px;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+table { width: 100%; min-width: 660px; border-collapse: collapse; }
+thead th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.human { background: var(--copper-wash); }
+td.who { white-space: nowrap; }
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.tag.auto { background: var(--verd-wash); color: var(--verdigris); border: 1px solid color-mix(in srgb, var(--verdigris) 26%, transparent); }
+.tag.man  { background: var(--copper-wash); color: var(--copper); border: 1px solid color-mix(in srgb, var(--copper) 30%, transparent); }
+.caught { color: var(--copper); font-weight: 500; }
+.none { color: var(--faint); }
+
+/* ─── notes ───────────────────────────────────────────────────────────── */
+.note {
+  margin-top: 22px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--verdigris);
+  border-radius: 3px;
+}
+.note.warn { border-left-color: var(--copper); }
+.note p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.note p + p { margin-top: 10px; }
+.note b { color: var(--ink); font-weight: 600; }
+
+pre {
+  margin: 12px 0 0;
+  padding: 13px 15px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.62;
+  color: var(--ink-soft);
+}
+
+footer {
+  margin-top: 60px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Go → GKE · lifecycle</div>
+    <h1>เส้นทางของหนึ่ง commit</h1>
+    <p class="thesis">
+      commit เดียวเดินได้สองเส้น และ<b>มีประตูที่ต้องใช้คนอยู่เส้นเดียว</b> —
+      ไม่ใช่เพราะลืมใส่ในอีกเส้น แต่เพราะ<b>ราคาของการแก้กลับไม่เท่ากัน</b>
+    </p>
+
+    <div class="chips">
+      <div class="chip ok"><b>10</b><span>ประตูอัตโนมัติ<br>ไม่ต้องรอคน</span></div>
+      <div class="chip hum"><b>1</b><span>ประตูมนุษย์<br>อยู่เส้น infra</span></div>
+      <div class="chip ok"><b>0</b><span>credential ของคลัสเตอร์<br>ที่ CI ถือไว้</span></div>
+      <div class="chip ok"><b>0/13,437</b><span>request หลุด<br>ตอน rollback</span></div>
+    </div>
+  </header>
+
+  <!-- ═════════════════════ FIGURE 1 ═════════════════════ -->
+  <section>
+    <h2>เส้นทางแยกที่จุดเริ่ม ไม่ใช่ตอนท้าย</h2>
+    <p class="lede">
+      ตัวที่ตัดสินว่าจะเดินเส้นไหนคือ <code>paths</code> filter ใน workflow —
+      แตะ <code>app/</code> <code>docker/</code> <code>k8s/</code> เข้าเส้นแอป ·
+      แตะ <code>infra/terraform/</code> เข้าเส้น infra
+    </p>
+
+    <figure>
+      <div class="canvas">
+        <svg viewBox="0 0 940 616" role="img"
+             aria-label="ผังเส้นทางของหนึ่ง commit แยกเป็นสองเส้น เส้นแอปผ่านห้าประตูอัตโนมัติแล้ว ArgoCD นำไป deploy เองโดยไม่มีคนอนุมัติ เส้น infra ผ่าน fmt validate plan แล้วหยุดรอคนอ่าน plan ก่อนจะ apply">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"></path>
+            </marker>
+          </defs>
+
+          <!-- push -->
+          <rect x="368" y="10" width="204" height="42" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-strong" x="470" y="31" text-anchor="middle">developer push</text>
+          <text class="s-sub" x="470" y="45" text-anchor="middle">แก้ไฟล์อะไร = เดินเส้นไหน</text>
+
+          <!-- split -->
+          <g color="var(--faint)">
+            <path d="M 440 52 L 230 78" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+            <path d="M 500 52 L 710 78" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <!-- ══ LEFT LANE: app ══ -->
+          <text class="s-lane" x="30" y="96">เส้นแอป · ci.yaml</text>
+          <rect x="26" y="104" width="404" height="1" fill="var(--verdigris)" opacity=".5"></rect>
+
+          <!-- gates box -->
+          <rect x="26" y="116" width="404" height="150" rx="3"
+                fill="var(--verd-wash)" stroke="var(--verdigris)" stroke-opacity=".35"></rect>
+          <text class="s-strong" x="42" y="136">5 ประตูอัตโนมัติ — ไม่ผ่านคือจบ</text>
+          <text class="s-sub" x="42" y="157">gofmt · go vet · go test -race  → 9 เทสต์</text>
+          <text class="s-sub" x="42" y="176">11 repository invariants</text>
+          <text class="s-sub" x="42" y="195">kustomize build → kubeconform -strict</text>
+          <text class="s-sub" x="42" y="214">Trivy IaC บน manifest ที่ render แล้ว</text>
+          <text class="s-sub" x="42" y="233">Trivy image · CRITICAL · --ignore-unfixed</text>
+          <text class="s-note" x="42" y="255">ลำดับสำคัญ: สแกน<tspan font-weight="600">ก่อน</tspan> push</text>
+
+          <g color="var(--faint)">
+            <path d="M 228 266 L 228 288" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="26" y="290" width="404" height="42" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="42" y="308">push image → Docker Hub</text>
+          <text class="s-sub" x="42" y="324">tag = sha-&lt;commit&gt; · ไม่มี latest</text>
+
+          <g color="var(--faint)">
+            <path d="M 228 332 L 228 354" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="26" y="356" width="404" height="42" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="42" y="374">CI commit tag กลับเข้า Git</text>
+          <text class="s-sub" x="42" y="390">[skip ci] กัน loop · เขียนออกนอกได้แค่นี้</text>
+
+          <g color="var(--faint)">
+            <path d="M 228 398 L 228 420" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="26" y="422" width="404" height="42" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="42" y="440">ArgoCD ในคลัสเตอร์ดึงเอง</text>
+          <text class="s-sub" x="42" y="456">poll ~3 นาที · AppProject จำกัด ns ปลายทาง</text>
+
+          <g color="var(--faint)">
+            <path d="M 228 464 L 228 486" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="26" y="488" width="404" height="42" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="42" y="506">admission: Pod Security restricted</text>
+          <text class="s-sub" x="42" y="522">pod ที่ securityContext ไม่ครบถูกปฏิเสธ</text>
+
+          <g color="var(--verdigris)">
+            <path d="M 228 530 L 228 552" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
+          </g>
+          <rect x="26" y="554" width="404" height="40" rx="3"
+                fill="var(--verd-wash)" stroke="var(--verdigris)" stroke-opacity=".5"></rect>
+          <text class="s-strong" x="228" y="573" text-anchor="middle" fill="var(--verdigris)">pod รับ traffic — ไม่มีใครกดอนุมัติ</text>
+          <text class="s-sub" x="228" y="587" text-anchor="middle">rolling update · maxUnavailable 0</text>
+
+          <!-- ══ RIGHT LANE: infra ══ -->
+          <text class="s-lane" x="510" y="96">เส้น infra · terraform.yaml</text>
+          <rect x="506" y="104" width="404" height="1" fill="var(--copper)" opacity=".5"></rect>
+
+          <rect x="506" y="116" width="404" height="60" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="522" y="136">fmt -check · validate</text>
+          <text class="s-sub" x="522" y="152">init -backend=false → ไม่ต้องมี credential</text>
+          <text class="s-sub" x="522" y="168">รันได้แม้ PR มาจาก fork</text>
+
+          <g color="var(--faint)">
+            <path d="M 708 176 L 708 198" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="506" y="200" width="404" height="66" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="522" y="220">plan — อ่าน state จริง</text>
+          <text class="s-sub" x="522" y="236">auth ด้วย Workload Identity Federation</text>
+          <text class="s-sub" x="522" y="252">สิทธิ์อ่านเท่านั้น · โพสต์ผลเป็น PR comment</text>
+
+          <g color="var(--copper)">
+            <path d="M 708 266 L 708 288" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
+          </g>
+
+          <!-- THE human gate -->
+          <rect x="506" y="290" width="404" height="86" rx="3"
+                fill="var(--copper-wash)" stroke="var(--copper)" stroke-width="1.6"></rect>
+          <text class="s-lane" x="522" y="311" fill="var(--copper)">ประตูมนุษย์ — เส้นนี้เท่านั้น</text>
+          <text class="s-strong" x="522" y="333">คนอ่าน plan</text>
+          <text class="s-sub" x="522" y="350">มองหา must be replaced / forces replacement</text>
+          <text class="s-sub" x="522" y="366">merge แล้ว GCP ยัง<tspan font-weight="600">ไม่เปลี่ยนอะไรเลย</tspan></text>
+
+          <g color="var(--copper)">
+            <path d="M 708 376 L 708 398" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar)"></path>
+          </g>
+
+          <rect x="506" y="400" width="404" height="60" rx="3"
+                fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="522" y="420">คนพิมพ์ apply เอง</text>
+          <text class="s-sub" x="522" y="436">terraform apply tfplan — plan ที่อ่านมาแล้ว</text>
+          <text class="s-sub" x="522" y="452">CI ไม่มีสิทธิ์ apply เลย</text>
+
+          <g color="var(--copper)">
+            <path d="M 708 460 L 708 482" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"></path>
+          </g>
+          <rect x="506" y="484" width="404" height="40" rx="3"
+                fill="var(--copper-wash)" stroke="var(--copper)" stroke-opacity=".5"></rect>
+          <text class="s-strong" x="708" y="503" text-anchor="middle" fill="var(--copper)">GCP เปลี่ยน · state ถูกล็อก</text>
+          <text class="s-sub" x="708" y="517" text-anchor="middle">เขียน state กลับ GCS</text>
+
+          <text class="s-note" x="506" y="548">ถ้า output เปลี่ยน (เช่น image_repository, ksa_annotation)</text>
+          <text class="s-note" x="506" y="566">ต้องเติมค่ากลับใน manifest แล้วเข้าเส้นแอปต่อ — พึ่งพาทางเดียว</text>
+        </svg>
+      </div>
+      <figcaption>
+        <b>ประตูทั้งสิบข้างซ้ายไม่มีมนุษย์อยู่เลย</b> ตั้งใจให้เป็นอย่างนั้น — pod ใหม่ที่ไม่ผ่าน readiness
+        ทำให้ rollout หยุดเอง และ <code>git revert</code> แก้กลับได้ในนาทีเดียว
+        ส่วนข้างขวาหยุดรอคนทุกครั้ง เพราะ <code>terraform destroy</code> ที่พลาดไม่มีอะไรมาหยุดให้
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ═════════════════════ GATES ═════════════════════ -->
+  <section>
+    <h2>ประตูทั้งหมด และของจริงที่มันเคยปฏิเสธ</h2>
+    <p class="lede">
+      ประตูที่ไม่เคยปฏิเสธอะไรก็ยังไม่รู้ว่าใช้ได้จริงไหม —
+      ช่องขวาจึงบันทึกเฉพาะสิ่งที่<b>เกิดขึ้นจริงในโปรเจกต์นี้</b> ไม่ใช่สิ่งที่มันควรจะจับได้
+    </p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ประตู</th>
+            <th>ใครบังคับ</th>
+            <th>ชนิด</th>
+            <th>เคยปฏิเสธอะไรจริง</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>go test -race</code> · <code>go vet</code> · <code>gofmt</code></td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ยังไม่เคย — 9 เทสต์ผ่านมาตลอด</td>
+          </tr>
+          <tr>
+            <td>11 repository invariants</td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="caught">plan archive ที่หลุดเข้ารีโป · action ref ที่ไม่มีอยู่จริงบน GitHub</td>
+          </tr>
+          <tr>
+            <td><code>kubeconform -strict</code></td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ยังไม่เคย — dev 7/7 · prod 8/8 valid</td>
+          </tr>
+          <tr>
+            <td>Trivy IaC บน manifest ที่ render แล้ว</td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ยังไม่เคย — 0 HIGH · 0 CRITICAL</td>
+          </tr>
+          <tr>
+            <td>Trivy image · <code>CRITICAL</code> · <code>--ignore-unfixed</code></td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ยังไม่เคย — distroless ทำให้เหลือช่องโหว่ 0</td>
+          </tr>
+          <tr>
+            <td>branch protection บน <code>main</code></td>
+            <td class="who">GitHub</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">bot ที่ bump tag อยู่ใน bypass list</td>
+          </tr>
+          <tr>
+            <td><code>AppProject</code> — จำกัด repo ต้นทางและ namespace ปลายทาง</td>
+            <td class="who">ArgoCD</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="caught">Service ตัวเดียวที่ chart จะสร้างลง <code>kube-system</code> → ทำให้ Application ล้ม 5 ตัวและ CRD ไม่ถูกติดตั้ง</td>
+          </tr>
+          <tr>
+            <td>Pod Security Standards <code>restricted</code></td>
+            <td class="who">kube-apiserver</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="caught">pod ทดสอบที่ผมสร้างเอง — ต้องใส่ securityContext ครบเท่าแอปจริงจึงรันได้</td>
+          </tr>
+          <tr>
+            <td>Workload Identity — ไม่มีไฟล์ key ที่ไหนเลย</td>
+            <td class="who">GCP</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ไม่มีอะไรให้รั่ว จึงไม่มีอะไรให้ปฏิเสธ</td>
+          </tr>
+          <tr>
+            <td>node service account — เหลือแค่ <code>artifactregistry.reader</code></td>
+            <td class="who">GCP IAM</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="none">ไม่ใช้ default compute SA</td>
+          </tr>
+          <tr class="human">
+            <td><b>คนอ่าน <code>terraform plan</code></b></td>
+            <td class="who"><b>มนุษย์</b></td>
+            <td><span class="tag man">ต้องใช้คน</span></td>
+            <td class="caught"><b>node pool replacement</b> — plan บอกว่า <code>1 to add, 1 to destroy</code> ตอนที่ LGTM กำลังรันอยู่ ถ้า auto-apply pod หายทั้งหมด</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note warn">
+      <p>
+        <b>แถวล่างสุดคือแถวที่อธิบายทั้งหน้านี้</b> ผมแก้ <code>initial_node_count</code>
+        แล้วรัน <code>plan</code> ก่อน — มันบอกว่าจะ <code>forces replacement</code> ทั้ง node pool
+      </p>
+      <pre>module.gke.google_container_node_pool.primary must be replaced
+  ~ initial_node_count = 0 -&gt; 1 # forces replacement
+Plan: 1 to add, 1 to destroy</pre>
+      <p>
+        ผมจึง <b>commit ไว้แต่ไม่ apply</b> แล้วรอไปทำกับคลัสเตอร์ใหม่ —
+        การตัดสินใจนี้ต้องรู้ว่า <b>ตอนนี้มีอะไรกำลังรันอยู่ที่เสียไม่ได้</b> ซึ่งเครื่องไม่รู้
+        <code>plan</code> มีค่าตรงที่บอกล่วงหน้า แต่มีค่าต่อเมื่อมีคนอ่าน
+      </p>
+    </div>
+  </section>
+
+  <!-- ═════════════════════ FIGURE 2 ═════════════════════ -->
+  <section>
+    <h2>ทำไมประตูมนุษย์อยู่เส้นเดียว</h2>
+    <p class="lede">
+      คำตอบไม่ใช่ "เส้นแอปสำคัญน้อยกว่า" — คือ <b>ราคาของการแก้กลับ</b> ต่างกันหลายเท่า
+    </p>
+
+    <figure>
+      <div class="canvas">
+        <svg viewBox="0 0 940 268" role="img"
+             aria-label="เปรียบเทียบการแก้กลับสองเส้น เส้นแอปใช้ git revert แล้ว ArgoCD ย้อนให้เองใน 40 วินาที วัดได้ว่าไม่มี request หลุดจาก 13,437 ครั้ง เส้น infra ต้อง git revert แล้ว apply ใหม่ และบางอย่างเช่นคลัสเตอร์ที่ถูกลบไม่กลับมา">
+          <defs>
+            <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"></path>
+            </marker>
+          </defs>
+
+          <!-- app recovery -->
+          <text class="s-lane" x="20" y="30" fill="var(--verdigris)">เส้นแอป — แก้กลับถูก</text>
+          <rect x="20" y="42" width="150" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="95" y="60" text-anchor="middle">git revert</text>
+          <text class="s-sub" x="95" y="75" text-anchor="middle">คำสั่งเดียว</text>
+
+          <g color="var(--verdigris)">
+            <path d="M 174 62 L 210 62" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="214" y="42" width="176" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="302" y="60" text-anchor="middle">ArgoCD ย้อนเอง</text>
+          <text class="s-sub" x="302" y="75" text-anchor="middle">ไม่มี kubectl ไม่มี CLI</text>
+
+          <g color="var(--verdigris)">
+            <path d="M 394 62 L 430 62" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="434" y="42" width="140" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="504" y="60" text-anchor="middle">rolling update</text>
+          <text class="s-sub" x="504" y="75" text-anchor="middle">maxSurge 1 · maxUnavail 0</text>
+
+          <g color="var(--verdigris)">
+            <path d="M 578 62 L 614 62" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="618" y="38" width="300" height="48" rx="3"
+                fill="var(--verd-wash)" stroke="var(--verdigris)" stroke-opacity=".55"></rect>
+          <text class="s-num" x="768" y="58" text-anchor="middle" fill="var(--verdigris)">40 วินาที · หลุด 0 จาก 13,437</text>
+          <text class="s-sub" x="768" y="74" text-anchor="middle">วัดจริงตอน rollback บน GKE</text>
+
+          <line x1="20" y1="112" x2="918" y2="112" stroke="var(--rule)" stroke-width="1"></line>
+
+          <!-- infra recovery -->
+          <text class="s-lane" x="20" y="140" fill="var(--copper)">เส้น infra — แก้กลับแพง</text>
+          <rect x="20" y="152" width="150" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="95" y="170" text-anchor="middle">git revert</text>
+          <text class="s-sub" x="95" y="185" text-anchor="middle">ยังไม่พอ</text>
+
+          <g color="var(--copper)">
+            <path d="M 174 172 L 210 172" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="214" y="152" width="176" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="302" y="170" text-anchor="middle">คน apply อีกรอบ</text>
+          <text class="s-sub" x="302" y="185" text-anchor="middle">อ่าน plan ใหม่ก่อน</text>
+
+          <g color="var(--copper)">
+            <path d="M 394 172 L 430 172" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="434" y="152" width="140" height="40" rx="3" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+          <text class="s-node" x="504" y="170" text-anchor="middle">สร้างใหม่</text>
+          <text class="s-sub" x="504" y="185" text-anchor="middle">15–18 นาที</text>
+
+          <g color="var(--copper)">
+            <path d="M 578 172 L 614 172" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"></path>
+          </g>
+          <rect x="618" y="148" width="300" height="48" rx="3"
+                fill="var(--copper-wash)" stroke="var(--copper)" stroke-opacity=".55"></rect>
+          <text class="s-strong" x="768" y="168" text-anchor="middle" fill="var(--copper)">บางอย่างไม่กลับมา</text>
+          <text class="s-sub" x="768" y="184" text-anchor="middle">คลัสเตอร์ที่ลบ · disk ที่ถูก reclaim · state</text>
+
+          <text class="s-note" x="20" y="228">git revert ทำให้ manifest กลับ แต่ไม่ทำให้คลัสเตอร์ที่ถูกลบกลับมา —</text>
+          <text class="s-note" x="20" y="248">ประตูมนุษย์จึงอยู่ตรงที่ผลของความผิดพลาดย้อนไม่ได้ ไม่ใช่ตรงที่งานสำคัญที่สุด</text>
+        </svg>
+      </div>
+      <figcaption>
+        <b>ตัวเลขบนแถวเขียววัดมาจริง</b> ไม่ใช่ประมาณ — ยิง request ต่อเนื่องระหว่าง rollback
+        แล้วนับทุกครั้งที่ไม่ได้ 200 ผลคือ <code>ok=13437 bad=0</code>
+        (บน kind เคยวัดได้ 0 จาก 8,017 ด้วยวิธีเดียวกัน)
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ═════════════════════ CREDENTIAL BOUNDARY ═════════════════════ -->
+  <section>
+    <h2>สิ่งที่ CI ทำไม่ได้เลย</h2>
+    <p class="lede">
+      คำถามว่า "มี secure approve ไหม" มีอีกครึ่งคำตอบที่ไม่ใช่เรื่องการอนุมัติ —
+      คือ<b>ขอบเขตที่ CI เอื้อมไม่ถึงตั้งแต่ต้น</b>
+    </p>
+
+    <div class="note">
+      <p>
+        <b>CI ไม่มี credential ของคลัสเตอร์แม้แต่ตัวเดียว</b>
+        สิ่งเดียวที่มันเขียนออกไปข้างนอกคือ commit ใน Git — ArgoCD ที่อยู่<em>ข้างใน</em>คลัสเตอร์เป็นคนไปดึงเอง
+        เรียกว่า <b>pull-based</b> เพราะทิศทางกลับกับที่คนคุ้นเคย
+      </p>
+      <p>
+        ผลตรง ๆ คือ ถ้า CI ถูกยึด คนที่ยึดได้แค่สิทธิ์ commit ไม่ได้สิทธิ์สั่งคลัสเตอร์
+        และ <code>invariant 3</code> จะทำให้ build ล้มถ้ามีคำว่า <code>kubectl</code>
+        โผล่ที่ไหนก็ตามใน <code>.github/workflows/</code>
+      </p>
+      <p>
+        ฝั่ง infra ก็มีขอบเขตเดียวกัน — identity ที่ CI สวมตอน <code>plan</code>
+        <b>ไม่มีสิทธิ์ apply เลย</b> มันบรรยายได้ว่าอะไรจะเปลี่ยน แต่เปลี่ยนไม่ได้
+        และ OIDC provider ผูกไว้กับ repo เดียวด้วย <code>attribute.repository</code>
+        — repo อื่นถือ token ที่ถูกต้องก็ใช้ไม่ได้
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Task 0–8 · รันจริงครบทุกข้อ</span>
+    <span>10 ประตูอัตโนมัติ · 1 ประตูมนุษย์</span>
+    <span>0 service account key</span>
+    <span>ข้อมูล ณ 10 ก.ย. 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>
