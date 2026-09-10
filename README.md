@@ -19,7 +19,7 @@ flowchart TB
 
     subgraph gh["GitHub"]
         R[("Repository<br/>app + manifests")]
-        CI["Actions — CI only<br/>test → build → trivy → push<br/>NO cluster credentials"]
+        CI["Actions — CI only<br/>test → build → scan → DAST → push<br/>NO cluster credentials"]
     end
 
     subgraph reg["Registries"]
@@ -320,6 +320,7 @@ Everything below was executed, not asserted.
 | Runs as | `65532:65532`, non-root |
 | Shell present | no — `exec /bin/sh` fails with `stat /bin/sh: no such file or directory` |
 | Trivy HIGH+CRITICAL, `--ignore-unfixed` | **0** |
+| ZAP baseline, rule 10021 raised to `FAIL` | 0 FAIL / 65 PASS — and `exit 1` on a copy with `nosniff` removed |
 | Graceful drain via `docker kill -s SIGTERM` | `/readyz` → 503 at t+141 ms; listener closed ≈ t+5 s; exit 0 |
 
 ### Manifests
@@ -385,7 +386,7 @@ The things a local cluster cannot show. Full detail, with the commands, in
 | `shellcheck` (`scripts/`) | 0 findings |
 | `gitleaks` (working tree + history) | no leaks found |
 | `trivy config` on **rendered** manifests | 0 HIGH / 0 CRITICAL — 41 of 42 policies pass |
-| `./scripts/check-invariants.sh` | 11/11 hold |
+| `./scripts/check-invariants.sh` | 12/12 hold |
 
 > `trivy config` must run on **rendered** output, not the source tree. Against `k8s/` directly it
 > reads `overlays/*/patches/*.yaml` as complete Deployments — they are strategic-merge fragments, so
@@ -395,7 +396,7 @@ The things a local cluster cannot show. Full detail, with the commands, in
 ### Reproduce it all
 
 ```bash
-./scripts/check-invariants.sh      # the 11 repository invariants, locally
+./scripts/check-invariants.sh      # the 12 repository invariants, locally
 ```
 
 Every tool above runs in a container, so none of it requires a local install beyond Docker — see
