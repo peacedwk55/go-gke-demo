@@ -1,0 +1,94 @@
+# Who has to approve what.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Why this file exists
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Without it, nothing distinguishes "a developer changing application code" from
+# "someone changing the pipeline that decides whether application code ships".
+# The second is the more dangerous edit, and until now it took the same zero
+# approvals as the first.
+#
+# The Trivy gate, the eleven repository invariants and the "no kubectl in CI"
+# rule all live in .github/workflows/ and scripts/. A single-line change there
+# turns any of them off, and the diff looks small.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# This file alone changes nothing
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# CODEOWNERS only takes effect where a pull request is required and reviews are
+# enforced. On this repository, as of this commit:
+#
+#   branch protection on main : NOT configured  (API reports protected: false)
+#   pull requests opened      : 0
+#   commits on main           : 59, all pushed directly
+#
+# So this file states the intended ownership boundary and will start enforcing it
+# the moment branch protection is switched on. The steps are in
+# .github/workflows/README.md. Committing the intent first is deliberate — the
+# boundary is a design decision and belongs in review, not in a settings page
+# nobody reads.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Placeholders
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# @app-team and @platform-team do not exist. This repository has one author, and
+# inventing GitHub teams that resolve to nobody would make every PR unmergeable
+# while looking correct. Replace them with real teams or usernames when there is
+# more than one person; the paths and the split are the part worth reviewing.
+
+# ── Default ─────────────────────────────────────────────────────────────────
+# Everything not matched below. Later rules win, so this is only a floor.
+*                                   @platform-team
+
+# ── Application code ────────────────────────────────────────────────────────
+# The app team owns what the service does.
+/app/                               @app-team
+/docker/                            @app-team @platform-team
+
+# ── What developers are meant to change without a platform review ───────────
+# This is the whole point of the Kustomize base/overlay split: tunable values
+# live in the overlay, so adjusting them is not a platform change.
+/k8s/overlays/dev/                  @app-team
+/k8s/overlays/prod/config.env       @app-team
+/k8s/overlays/prod/patches/         @app-team
+
+# ── Delivery and platform: platform review required ─────────────────────────
+# k8s/base holds the securityContext, the probes, the PDB and the rollout
+# strategy. Those are the guarantees, not tunables.
+/k8s/base/                          @platform-team
+
+# The pipeline that decides what ships, and the gates inside it.
+/.github/                           @platform-team
+/scripts/                           @platform-team
+
+# Infrastructure. A change here can delete a cluster; see the human gate in
+# .github/workflows/terraform.yaml.
+/infra/                             @platform-team
+
+# Delivery and observability configuration.
+/argocd/                            @platform-team
+/observability/                     @platform-team
+
+# Ansible manages VMs outside the cluster.
+/ansible/                           @platform-team
+
+# ── The rules about the rules ───────────────────────────────────────────────
+# Changing the spec, the ignore rules, or the line-ending policy changes what
+# every other check means.
+/CLAUDE.md                          @platform-team
+/.gitignore                         @platform-team
+/.gitattributes                     @platform-team
+/.trivyignore                       @platform-team
+/.yamllint.yml                      @platform-team
+/trivy.yaml                         @platform-team
+
+# ── Deliberately NOT restricted ─────────────────────────────────────────────
+# Documentation. A stale document is a real problem — three were found in this
+# project — and requiring a platform review to fix a wrong sentence is how they
+# stay wrong.
+/README.md                          @app-team @platform-team
+/EVIDENCE.md                        @app-team @platform-team
+/RUNBOOK.md                         @app-team @platform-team

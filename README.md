@@ -70,7 +70,8 @@ attacker gets the ability to make a reviewable, revertible commit — not cluste
 | [infra/terraform/](infra/terraform/) | 4 | VPC, regional private GKE, IAM + Workload Identity |
 | [argocd/](argocd/) | 5 | `AppProject`s and `Application`s |
 | [observability/](observability/) | 6 | LGTM Helm values, 3 dashboards, alert rules |
-| [.github/workflows/](.github/workflows/) | 7 | CI, and Terraform plan-on-PR |
+| [.github/workflows/](.github/workflows/) | 7 | CI, and Terraform plan-on-PR — plus the [workflow README](.github/workflows/README.md) covering gates, write-back auth and branch protection |
+| [.github/CODEOWNERS](.github/CODEOWNERS) | — | Intended ownership boundary; inert until pull requests are required |
 | [ansible/](ansible/) | 8 | 4 roles: common, docker, nginx_container, node_exporter |
 | [scripts/](scripts/) | — | Repository invariants, cluster bootstrap, port-forward every UI |
 | [EVIDENCE.md](EVIDENCE.md) | — | What the live clusters actually proved, with the commands that produced it |
@@ -406,6 +407,28 @@ each directory's README for the exact commands.
 
 Things deliberately left undone, with the reasoning — because knowing what you skipped is part of
 knowing what you built.
+
+**No human review gate on the application path.** Branch protection on `main` is
+not configured, no pull request was ever opened, and every commit was pushed
+directly — 59 of them. The only human gate in the system sits on the infra path,
+where someone reads `terraform plan` before applying, and that reviews
+infrastructure impact rather than code. This is a consequence of one person
+building the whole thing and it leaves a real hole: the Trivy gate, the eleven
+invariants and the "no kubectl in CI" rule all live in `.github/workflows/` and
+`scripts/`, so whoever can push can also switch any of them off in a one-line
+diff that looks small. `.github/CODEOWNERS` now records the intended boundary,
+but CODEOWNERS enforces nothing until pull requests are required — the switch is
+branch protection, and the steps including the bump-bot bypass are in
+[.github/workflows/README.md](.github/workflows/README.md).
+
+**No approval step before deploy, deliberately — but note where it would go.**
+CI does not deploy; ArgoCD does, from inside the cluster. So a GitHub Environment
+with required reviewers would gate the wrong step. The deployment approval gate
+belongs on the ArgoCD `Application`: drop `syncPolicy.automated` and a human
+presses Sync. That buys an approval and costs `selfHeal`, so drift stops being
+corrected automatically. Worth it under regulation; not worth it here, where a
+bad deploy is forty seconds and one `git revert` from undone — measured, 13,437
+requests with none dropped.
 
 **No Ingress, Gateway or TLS.** The Service is `ClusterIP`. Doing this properly means an Ingress or
 HTTPRoute plus cert-manager and a WAF policy — a task of its own. A `LoadBalancer` Service was the
