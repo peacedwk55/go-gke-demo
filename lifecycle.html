@@ -345,7 +345,7 @@ footer {
           <text class="s-sub" x="42" y="276">govulncheck — CVE ที่โค้ดเรียกถึงจริง</text>
           <text class="s-sub" x="42" y="295">gosec — SAST อ่านโค้ดเราเอง</text>
           <text class="s-sub" x="42" y="314">11 invariants · gitleaks ทั้ง history</text>
-          <text class="s-sub" x="42" y="333">kubeconform · Trivy IaC · Trivy image</text>
+          <text class="s-sub" x="42" y="333">kubeconform · Trivy IaC · Trivy image · ZAP baseline</text>
           <text class="s-note" x="42" y="355">สแกน<tspan font-weight="600">ก่อน</tspan> push — ลำดับนี้สำคัญ</text>
 
           <g color="var(--faint)">
@@ -508,6 +508,14 @@ footer {
             <td class="who">GitHub Actions</td>
             <td><span class="tag auto">อัตโนมัติ</span></td>
             <td class="none">ยังไม่เคย — distroless ทำให้เหลือช่องโหว่ 0</td>
+          </tr>
+          <tr>
+            <td><b>ZAP baseline</b> — DAST อ่าน HTTP จากสายจริง</td>
+            <td class="who">GitHub Actions</td>
+            <td><span class="tag auto">อัตโนมัติ</span></td>
+            <td class="caught"><b>พิสูจน์ด้วยการทำให้มันล้มก่อน</b> — สำเนาแอปที่ถอด
+              <code>nosniff</code> ออกทำให้ rule 10021 เป็น <code>FAIL</code> และ exit 1
+              ส่วนตัวจริง exit 0 · ต่างกันบรรทัดเดียวและเป็นบรรทัดที่ถูก</td>
           </tr>
           <tr>
             <td><code>gitleaks</code> — สแกน secret ทั้ง history</td>
@@ -689,7 +697,7 @@ Plan: 1 to add, 1 to destroy</pre>
 
   <footer>
     <span>Task 0–8 · รันจริงครบทุกข้อ</span>
-    <span>14 ประตูอัตโนมัติ · 2 ประตูมนุษย์</span>
+    <span>13 ประตูอัตโนมัติ · 2 ประตูมนุษย์</span>
     <span>0 service account key</span>
     <span>ข้อมูล ณ 10 ก.ย. 2026</span>
   </footer>

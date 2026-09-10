@@ -408,18 +408,26 @@ each directory's README for the exact commands.
 Things deliberately left undone, with the reasoning — because knowing what you skipped is part of
 knowing what you built.
 
-**No human review gate on the application path.** Branch protection on `main` is
-not configured, no pull request was ever opened, and every commit was pushed
-directly — 59 of them. The only human gate in the system sits on the infra path,
-where someone reads `terraform plan` before applying, and that reviews
-infrastructure impact rather than code. This is a consequence of one person
-building the whole thing and it leaves a real hole: the Trivy gate, the eleven
-invariants and the "no kubectl in CI" rule all live in `.github/workflows/` and
-`scripts/`, so whoever can push can also switch any of them off in a one-line
-diff that looks small. `.github/CODEOWNERS` now records the intended boundary,
-but CODEOWNERS enforces nothing until pull requests are required — the switch is
-branch protection, and the steps including the bump-bot bypass are in
+**A review gate now exists on the application path, and it is enforcing for
+everyone except its author.** This entry used to say there was none, and for the
+first 59 commits — all pushed straight to `main` — that was true. A ruleset is
+now active and verified against the API rather than the settings screen:
+`protected: true`, deletions restricted, force pushes blocked, `approvals=1` with
+code-owner review, and three required status checks. Two pull requests have gone
+through it.
+
+The remaining hole is narrower but real: `Repository admin` sits in the bypass
+list, because the bump commit pushes straight to `main` with a PAT owned by the
+only human on the repository. So the ruleset is **advisory for that person and
+enforcing for everyone else**. A Deploy key or a GitHub App as the bump identity
+is what removes the bypass, and both routes are written up in
 [.github/workflows/README.md](.github/workflows/README.md).
+
+Two things the first pull request taught, both worth keeping: a required status
+check must be one that runs on *every* pull request, or a path-filtered workflow
+leaves unrelated PRs waiting on a status that never arrives; and `approvals=1` is
+unsatisfiable on a single-author repository, because GitHub does not let anyone
+approve their own PR.
 
 **No approval step before deploy, deliberately — but note where it would go.**
 CI does not deploy; ArgoCD does, from inside the cluster. So a GitHub Environment
@@ -430,15 +438,29 @@ corrected automatically. Worth it under regulation; not worth it here, where a
 bad deploy is forty seconds and one `git revert` from undone — measured, 13,437
 requests with none dropped.
 
-**No DAST, and no image signing.** The pipeline now has unit tests, SAST
-(`gosec`), reachability-based dependency scanning (`govulncheck`), secret scanning
-over full history (`gitleaks`), IaC scanning and container scanning — but nothing
-exercises the application while it is running, and nothing signs what it ships.
-DAST needs a deployed target, which this pipeline deliberately has no credentials
-to reach; it belongs against the dev overlay in a throwaway cluster, not in a
-workflow that holds no kubeconfig. Signing is keyless cosign plus a policy
-controller refusing unsigned images, which closes the loop between "CI built it"
-and "the cluster will run it" — roughly a day, and the natural next increment.
+**DAST now exists, and the argument this entry used to make against it was
+wrong.** It said DAST needs a deployed target that a credential-free pipeline
+cannot reach. That conflated *deployed* with *running*: the image CI has just
+built runs perfectly well inside the runner, on a bridge network, with no
+cluster and no kubeconfig anywhere near it. `zap-baseline.py` now runs in the
+`build` job between the Trivy scan and the Docker Hub login, so the image under
+test is the one that would be published and has not been.
+
+It is the only gate that reads HTTP off the wire — the tests read the handler,
+`gosec` reads the source, Trivy reads the package list, and none of them notice a
+header lost between the handler and the socket. Proven in both directions before
+being committed, against a copy of the app with the headers deleted: hardened
+`exit 0` / `nosniff` removed `exit 1` on rule 10021. Reasoning in
+[.zap/README.md](.zap/README.md).
+
+Scope stated narrowly, because the wider claim is false: the vulnerable build
+still returned `text/plain` (Go's sniffer does not read `Hello <script>…` as
+HTML), so ZAP reports the missing header rather than an XSS. The headers are
+defence in depth and this gate protects the headers.
+
+**Image signing is still absent.** Keyless cosign plus a policy controller
+refusing unsigned images closes the loop between "CI built it" and "the cluster
+will run it" — roughly a day, and the natural next increment.
 
 **No Ingress, Gateway or TLS.** The Service is `ClusterIP`. Doing this properly means an Ingress or
 HTTPRoute plus cert-manager and a WAF policy — a task of its own. A `LoadBalancer` Service was the
