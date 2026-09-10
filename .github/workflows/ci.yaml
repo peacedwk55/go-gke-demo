@@ -85,6 +85,10 @@ env:
   GOVULNCHECK_VERSION: "v1.1.4"
   GOSEC_VERSION: "v2.29.0"
   GITLEAKS_VERSION: "v8.30.1"
+  # DAST. `zaproxy/zap-stable` is the current image; the widely-copied
+  # `owasp/zap2docker-stable` was retired and now answers "object not
+  # found" — checked, not assumed.
+  ZAP_VERSION: "2.17.0"
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
@@ -332,6 +336,86 @@ jobs:
           exit-code: "0"
           ignore-unfixed: true
           scanners: vuln
+
+      # ── DAST — the only gate that looks at the running binary ───────────────
+      #
+      # It sits here, after Trivy and before the login, for the same reason
+      # Trivy does: the image under test is the one that would be published, and
+      # it has not been published yet.
+      #
+      # What it is actually for. The app reflects ?name= into the body without
+      # escaping it, which is safe only because every response carries
+      # Content-Type: text/plain AND X-Content-Type-Options: nosniff. Three
+      # separate checks now cover that pair, and they fail for different
+      # reasons: TestHelloIsNotHTML reads the handler's own output, gosec reads
+      # the source (G705), and this reads HTTP off the wire. Only the third one
+      # notices if the header is lost somewhere between the handler and the
+      # socket — a middleware, a proxy, a base-image change.
+      #
+      # Proven in both directions before this step was written, against a copy
+      # of the app with the two headers deleted:
+      #   hardened build   FAIL-NEW: 0   65 PASS   exit 0
+      #   nosniff removed  FAIL-NEW: 1   64 PASS   exit 1  <- rule 10021
+      # A gate that has only ever been observed passing is not known to work.
+      #
+      # baseline, not full-scan, and that is measured too: zap-full-scan.py took
+      # 8 minutes over 140 rules on this app and reported nothing the 2.5-minute
+      # passive baseline had not already found. Four plaintext endpoints give an
+      # active scanner almost no surface. `.zap/README.md` has the full-scan
+      # command for when someone wants it by hand.
+      - name: Start the built image as a DAST target
+        run: |
+          # A user-defined bridge, not --network host: ZAP resolves the target by
+          # container name, which behaves identically on a Linux runner and on a
+          # developer's Docker Desktop. The host form only works on one of them,
+          # so it could not have been tested before being committed.
+          IMG="${IMAGE_NAME}:${TAG}"
+          READY="http://localhost:18080/readyz"
+          docker network create dast
+          docker run -d --name dast-target --network dast -p 18080:8080 "$IMG"
+          for i in $(seq 1 30); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 2 "$READY")" = "200" ]; then
+              echo "target ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::DAST target never became ready"
+          docker logs dast-target || true
+          exit 1
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+
+      - name: ZAP baseline — gate on the security headers
+        run: |
+          # 0777 is not sloppiness. The ZAP image runs as uid 1000 (zap) and the
+          # runner workspace belongs to uid 1001 (runner), so ZAP cannot write
+          # its reports into a directory this job just created. On Docker Desktop
+          # the mount is permissive and the problem is invisible — which is
+          # exactly why it is written down here.
+          mkdir -p zap-out && chmod 777 zap-out
+          cp .zap/rules.tsv zap-out/rules.tsv
+          docker run --rm --network dast -v "$PWD/zap-out:/zap/wrk:rw" \
+            "zaproxy/zap-stable:${ZAP_VERSION}" \
+            zap-baseline.py -t http://dast-target:8080 -c rules.tsv -I \
+            -r zap-report.html -w zap-report.md -J zap-report.json
+          # -I means warnings do not fail the build; only rules marked FAIL in
+          # .zap/rules.tsv do. Which rules those are, and why the other two are
+          # left at WARN rather than ignored, is argued in that file.
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-${{ steps.meta.outputs.tag }}
+          path: zap-out/zap-report.*
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Tear down the DAST target
+        if: always()
+        run: |
+          docker rm -f dast-target || true
+          docker network rm dast || true
 
       # Only now, having passed the gate, do we publish.
       - name: Log in to Docker Hub
