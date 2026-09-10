@@ -5,7 +5,7 @@ Two pipelines with deliberately different endings.
 | | `ci.yaml` | `terraform.yaml` |
 |---|---|---|
 | Triggered by | `app/` `docker/` `k8s/base/` `scripts/` … | `infra/terraform/**` |
-| Gates | tests · 11 invariants · kubeconform · Trivy IaC · Trivy image | `fmt` · `validate` · `plan` |
+| Gates | tests · **gosec** · **govulncheck** · 11 invariants · **gitleaks** · kubeconform · Trivy IaC · Trivy image | `fmt` · `validate` · `plan` |
 | Ends with | a Git commit — ArgoCD does the rest, unattended | **a plan for a human to read** |
 | Touches the cluster | never | never |
 
@@ -105,26 +105,31 @@ catch it and no zero-downtime path back.
 
 ---
 
-## Review gates: what is missing, and how to switch it on
+## Review gates
 
-As of this writing there is **no human review gate on the application path**:
+Now configured, having been absent for the first 59 commits — all of which were
+pushed straight to `main`. Verified against the API rather than the settings
+screen:
 
 ```
-branch protection on main : not configured   (protected: false)
-pull requests opened      : 0
-commits on main           : pushed directly
+protected               : true
+deletion                : restricted
+non_fast_forward        : blocked
+pull_request            : approvals=1, code owner review=true
+required_status_checks  : Lint & test · Repository invariants · Build, scan, push
 ```
 
-That is a consequence of one person building the whole thing, and it leaves a
-real hole — the Trivy gate, the eleven invariants and the "no kubectl" rule all
-live in this directory and in `scripts/`, so whoever can push can also switch any
-of them off in a one-line diff that looks small.
+Why it matters here specifically: the Trivy gates, the eleven invariants, gosec,
+govulncheck and gitleaks all live in this directory and in `scripts/`. Whoever can
+push can also switch any of them off in a one-line diff that looks small, so the
+review boundary is what protects the other gates.
 
-`.github/CODEOWNERS` records the intended boundary, but **it enforces nothing on
-its own**: CODEOWNERS applies only where a pull request is required and reviews
-are enforced. Branch protection is the switch that gives it effect.
+`.github/CODEOWNERS` carries that boundary — app code and overlay values to the
+app team, the pipeline and infra and `k8s/base` to platform. It enforces nothing
+on its own: CODEOWNERS applies only where pull requests are required and reviews
+are enforced, which is what the ruleset above now provides.
 
-### Switching it on
+### Switching it on (for a fresh clone of this setup)
 
 GitHub → **Settings → Branches → Add branch ruleset** (or *Add rule* on the
 classic screen), targeting `main`:
@@ -132,13 +137,30 @@ classic screen), targeting `main`:
 - [x] **Require a pull request before merging**
   - Required approvals: **1**
   - [x] Require review from Code Owners
-- [x] **Require status checks to pass**, and select:
+- [x] **Require status checks to pass**, and select exactly these three:
   - `Lint & test`
   - `Repository invariants`
   - `Build, scan, push`
-  - `fmt & validate`
 - [x] Require branches to be up to date before merging
 - [x] Block force pushes
+
+> **Do not add `fmt & validate`, and this correction is from getting it wrong.**
+> An earlier version of this list included it, and the very first pull request
+> proved why that breaks: `terraform.yaml` is path-filtered to
+> `infra/terraform/**`, so on a PR that touches anything else the workflow never
+> runs, the check reports nothing, and it sits at *"Expected — Waiting for status
+> to be reported"* forever. The PR becomes permanently unmergeable.
+>
+> The rule is that **a required check must be one that runs on every pull
+> request**. `Terraform / plan` was excluded for exactly this reason and the same
+> reasoning applies one step earlier, to `fmt & validate` — which I missed while
+> writing the warning about `plan`.
+>
+> If a path-filtered workflow genuinely must be required, the standard pattern is
+> a companion job that reports the same check name and succeeds immediately when
+> the paths do not match. That is real complexity for little gain here:
+> `terraform.yaml` already runs on every PR that touches Terraform, which is when
+> it means anything.
 
 **Then the part that breaks the pipeline if you skip it.** The bump commit pushes
 straight to `main`, so the identity behind `MANIFEST_BUMP_TOKEN` must be allowed
@@ -153,6 +175,25 @@ and the symptom is a green CI with nothing deploying.
 `Terraform / plan` is deliberately **not** in the required-checks list: it is
 gated off by default, and a required check that never runs blocks every merge
 forever.
+
+### "Require 1 approval" cannot be satisfied by a single author
+
+GitHub does not let anyone approve their own pull request. On a repository with
+one human, `Required approvals: 1` is therefore not a rule that is waiting for
+someone — it is unsatisfiable, and every PR needs the admin bypass to merge.
+
+Two honest ways to hold that:
+
+- **Keep `1` and bypass.** The configuration is then correct for the team it is
+  written for, it starts working the moment a second reviewer exists, and each
+  use of the bypass is recorded on the PR. The three status checks still have to
+  be green first, which is the part of the ruleset carrying most of the value.
+- **Set it to `0`.** Every rule in the ruleset is then satisfiable and nothing
+  needs bypassing — at the cost of the repository having no review requirement at
+  all, and needing to be reconfigured when a second person arrives.
+
+Neither is wrong. What would be wrong is leaving `1` in place without saying that
+the only human on the repository has to step around it.
 
 ### If you want an approval button before deploy
 
