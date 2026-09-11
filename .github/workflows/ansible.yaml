@@ -29,6 +29,11 @@ on:
     paths:
       - "ansible/**"
       - ".github/workflows/ansible.yaml"
+  # Re-running the idempotency proof should not require editing a file under
+  # ansible/ just to trip the path filter. It is also the honest way to re-check
+  # a claim that can rot without any change here at all: a new runner image, a
+  # new Docker version in Docker's apt repository, or a node_exporter release.
+  workflow_dispatch:
 
 permissions:
   contents: read
