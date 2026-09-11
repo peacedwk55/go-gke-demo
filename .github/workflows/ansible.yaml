@@ -1,0 +1,225 @@
+# Task 8's grading criterion, actually measured.
+#
+# "Idempotency is the grading criterion: second run must report changed=0."
+# That is a claim about a running machine, so a lint pass cannot establish it and
+# a screenshot of someone's laptop is not evidence anyone else can re-check. This
+# workflow runs the playbook twice against the runner itself and fails if the
+# second run changed anything.
+#
+# The runner IS the managed host. It has apt, systemd and Docker, which is
+# everything these roles touch, and it costs nothing. inventory/ci.ini exists for
+# exactly this; inventory/hosts.ini stays as the shape a real deployment takes.
+#
+# ⚠️ Do NOT add either job below to the required-status-checks list. Both are
+# path-filtered to ansible/**, so on a pull request that touches anything else
+# they never run, never report, and the pull request waits on a status that will
+# never arrive — permanently unmergeable. That is not a hypothetical: it is what
+# the first pull request in this repository taught, and .github/workflows/README.md
+# records it.
+
+name: Ansible
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ansible/**"
+      - ".github/workflows/ansible.yaml"
+  pull_request:
+    paths:
+      - "ansible/**"
+      - ".github/workflows/ansible.yaml"
+  # Re-running the idempotency proof should not require editing a file under
+  # ansible/ just to trip the path filter. It is also the honest way to re-check
+  # a claim that can rot without any change here at all: a new runner image, a
+  # new Docker version in Docker's apt repository, or a node_exporter release.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned like every other tool here. ansible-core and ansible-lint are pinned
+  # separately because ansible-lint pulls its own ansible-core otherwise, and a
+  # silent core upgrade changes module behaviour under the roles.
+  ANSIBLE_CORE_VERSION: "2.21.4"
+  ANSIBLE_LINT_VERSION: "26.8.0"
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. Lint — cheap, and catches the class of mistake that never reaches runtime
+  # ───────────────────────────────────────────────────────────────────────────
+  lint:
+    name: ansible-lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ansible-core and ansible-lint
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "ansible-core==${ANSIBLE_CORE_VERSION}" \
+            "ansible-lint==${ANSIBLE_LINT_VERSION}"
+
+      - name: Install the pinned collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Syntax check
+        working-directory: ansible
+        run: ansible-playbook -i inventory/hosts.ini site.yml --syntax-check
+
+      # The production profile is the strict one. It was already passing when run
+      # by hand; the point of this step is that "passing" stops depending on
+      # somebody remembering to run it.
+      - name: ansible-lint — production profile
+        working-directory: ansible
+        run: ansible-lint --profile production
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Converge twice — the actual idempotency proof
+  # ───────────────────────────────────────────────────────────────────────────
+  converge:
+    name: Idempotency (run twice, changed=0)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ansible-core
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core==${ANSIBLE_CORE_VERSION}"
+
+      - name: Install the pinned collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
+      # The docker role templates /etc/docker/daemon.json and notifies a restart.
+      # The runner ships its own daemon.json, so the first run legitimately
+      # changes it — which is the point of a first run. Recorded here so the
+      # first-run change count is not mistaken for a defect.
+      - name: Show what the runner starts with
+        run: |
+          echo "--- /etc/docker/daemon.json (before) ---"
+          sudo cat /etc/docker/daemon.json 2>/dev/null || echo "(absent)"
+          echo "--- docker version ---"
+          docker --version
+          echo "--- listeners on 8080 / 9100 ---"
+          sudo ss -lntp | grep -E ':8080|:9100' || echo "(both free)"
+
+      # `shell: bash` is not cosmetic. A bare `run:` gets `bash -e` WITHOUT
+      # pipefail, so `ansible-playbook | tee` returns tee's exit code — zero —
+      # and a playbook that failed outright would leave this step green. Naming
+      # the shell switches on `-eo pipefail`, and `set -o pipefail` is repeated
+      # in the body so the guarantee is visible where the pipe is.
+      - name: First run — convergence
+        working-directory: ansible
+        shell: bash
+        run: |
+          set -o pipefail
+          ansible-playbook -i inventory/ci.ini site.yml --diff \
+            | tee "${RUNNER_TEMP}/run1.txt"
+
+      - name: Second run — must change nothing
+        working-directory: ansible
+        shell: bash
+        run: |
+          set -o pipefail
+          ansible-playbook -i inventory/ci.ini site.yml --diff \
+            | tee "${RUNNER_TEMP}/run2.txt"
+
+      # Parsing the recap rather than trusting the exit code, because a playbook
+      # that changes something on every run still exits 0. changed=0 is the
+      # criterion, so changed=0 is what gets asserted.
+      - name: Assert the second run changed nothing
+        run: |
+          recap="$(sed -n '/PLAY RECAP/,$p' "${RUNNER_TEMP}/run2.txt")"
+          if [ -z "$recap" ]; then
+            echo "::error::no PLAY RECAP in the second run's output"
+            exit 1
+          fi
+          echo "$recap"
+
+          # Pure awk, for two reasons that both came from reading this back.
+          #
+          # bc is not guaranteed present, and a missing interpreter that yields
+          # an empty string would make the comparison below pass on nothing —
+          # the same silent-stub failure that had invariant 11 reporting PASS on
+          # a tracked plan archive.
+          #
+          # And a grep|cut|awk pipeline breaks under pipefail the moment a
+          # counter is absent from the recap, because grep exits 1 on no match.
+          # One awk has no pipe to fail.
+          sum() {
+            printf '%s\n' "$recap" | awk -v k="$1" '
+              { line = $0
+                while (match(line, k"=[0-9]+")) {
+                  t += substr(line, RSTART + length(k) + 1, RLENGTH - length(k) - 1)
+                  line = substr(line, RSTART + RLENGTH)
+                } }
+              END { print t + 0 }'
+          }
+
+          # An absent counter also sums to zero, which would make "changed=0"
+          # true by vacuity. Require the token to exist before believing it.
+          if ! printf '%s\n' "$recap" | grep -q 'changed='; then
+            echo "::error::the recap has no changed= counter; not treating that as changed=0"
+            exit 1
+          fi
+          changed="$(sum changed)"
+          failed="$(sum failed)"
+          unreachable="$(sum unreachable)"
+          rescued="$(sum rescued)"
+          echo "changed=$changed failed=$failed unreachable=$unreachable rescued=$rescued"
+
+          rc=0
+          [ "$failed" -eq 0 ] || { echo "::error::second run had failed=$failed"; rc=1; }
+          [ "$unreachable" -eq 0 ] || { echo "::error::second run had unreachable=$unreachable"; rc=1; }
+          if [ "$changed" -ne 0 ]; then
+            echo "::error::second run reported changed=$changed — the playbook is not idempotent"
+            echo "Tasks that changed on the second run:"
+            grep -B1 -E '^\s*changed:' "${RUNNER_TEMP}/run2.txt" || true
+            rc=1
+          fi
+          if [ "$rc" -eq 0 ]; then
+            echo "idempotent: the second run changed nothing"
+          fi
+          exit "$rc"
+
+      # Independent of Ansible's own reporting. The playbook's post_tasks already
+      # check these, but they run inside the thing being tested; this looks from
+      # outside it.
+      - name: Verify the host from outside the playbook
+        run: |
+          echo "--- NGINX on :8080 ---"
+          curl -sS -o /dev/null -w 'http=%{http_code}\n' http://127.0.0.1:8080/
+          curl -sS http://127.0.0.1:8080/ | head -20
+          echo "--- node_exporter on :9100 ---"
+          curl -sS -o /dev/null -w 'http=%{http_code}\n' http://127.0.0.1:9100/metrics
+          echo "--- systemd unit ---"
+          systemctl is-enabled node_exporter
+          systemctl is-active node_exporter
+          echo "--- the user is a system, non-login account ---"
+          getent passwd node_exporter
+          echo "--- docker log rotation is what the template says ---"
+          sudo cat /etc/docker/daemon.json
+
+      - name: Upload both run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ansible-runs
+          path: |
+            ${{ runner.temp }}/run1.txt
+            ${{ runner.temp }}/run2.txt
+          retention-days: 14
+          if-no-files-found: warn
