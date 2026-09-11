@@ -4,18 +4,40 @@
 # behaviour, and "it worked last month" is not a deployment strategy.
 #
 #   ansible-galaxy collection install -r requirements.yml
+# ⚠️ A pin is not the same as compatibility, and this file is where that was
+# learned. community.general 9.5.1 declares `requires_ansible: >=2.13.0`, which
+# ansible-core 2.21.4 satisfies — and its yaml callback still crashed on import,
+# taking the whole run down before the first task. A declared range says what
+# upstream promised years ago, not what upstream tests today.
 collections:
   - name: community.docker
     version: "3.13.1"
     # docker_container / docker_image in the nginx_container role.
+    #
+    # Deliberately NOT bumped alongside the two below, though 5.3.0 exists.
+    # This is the only collection here doing real work rather than formatting
+    # output, and it is four majors behind; moving it at the same time as the
+    # callback fix would make any failure ambiguous. It gets its own change,
+    # with its own run.
   - name: community.general
-    version: "9.5.1"
-    # timezone module in the common role.
+    version: "13.4.0"
+    # timezone module in the common role. Was 9.5.1, whose yaml callback is what
+    # exited 250 above. 13.x removed that callback entirely and declares
+    # `requires_ansible: >=2.18.0`, so it is tested against something close to
+    # the core we pin. `plugins/modules/timezone.py` is still present — checked
+    # in the published tarball, not assumed from the changelog.
   - name: ansible.posix
-    version: "1.6.2"
+    version: "2.2.2"
     # Provides the profile_tasks callback that ansible.cfg enables.
     #
     # Declared here because it was missing, and the symptom was quiet: a
     # "Skipping callback plugin 'profile_tasks', unable to load" warning and no
     # per-task timings. The run still succeeds, so a config referring to a
     # plugin nobody ships is easy to leave broken for a long time.
+    #
+    # Bumped from 1.6.2 for the same reason community.general moved: it is the
+    # other collection callback loaded at startup, so it carries the identical
+    # failure mode. It was never reached last time only because the stdout
+    # callback is loaded first and died there. 2.2.2 declares
+    # `requires_ansible: >=2.16.0` and still ships profile_tasks — checked in
+    # the tarball.

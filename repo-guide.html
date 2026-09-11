@@ -1132,7 +1132,7 @@ footer {
         <div class="f-desc"><p>เรียก 4 role ตามลำดับพึ่งพา <code>pre_tasks</code> มี assert ที่ล้มทันทีถ้าเป้าหมายไม่ใช่ตระกูล Debian และ <code>post_tasks</code> ยิง <code>uri</code> ไปที่พอร์ต NGINX และพอร์ต metrics จริง แล้ว assert ว่า HTML มี <code>inventory_hostname</code> อยู่ — พิสูจน์ว่าหน้าที่ template ไปถึง container จริง ไม่ใช่แค่มี <em>อะไรบางอย่าง</em> ตอบที่พอร์ต 8080</p></div>
       </div>
       <div class="file">
-        <div class="f-name">ansible.cfg<em>27 บรรทัด</em></div>
+        <div class="f-name">ansible.cfg<em>60 บรรทัด</em></div>
         <div class="f-desc"><p>output เป็น YAML, เปิด <code>profile_tasks</code> ให้เห็นจำนวน change ท้ายการรัน, SSH pipelining และ ControlPersist ตั้งใจไม่ตั้ง <code>become_ask_pass</code> เพราะรหัสผ่านในไฟล์ config คือ credential ใน Git</p></div>
       </div>
       <div class="file">
@@ -1144,7 +1144,7 @@ footer {
         <div class="f-desc"><p>มีแต่โฮสต์ ไม่มี credential มีกลุ่ม <code>[local_test]</code> คอมเมนต์ไว้ และคำสั่ง Multipass สำหรับสร้าง VM ทดสอบฟรี</p></div>
       </div>
       <div class="file">
-        <div class="f-name">requirements.yml<em>21 บรรทัด</em></div>
+        <div class="f-name">requirements.yml<em>43 บรรทัด</em></div>
         <div class="f-desc"><p><code>community.docker</code> และ <code>community.general</code> pin ทั้งคู่ เพราะการอัปเกรด collection เปลี่ยนพฤติกรรมของ module ได้ และ "เดือนที่แล้วมันใช้ได้" ไม่ใช่กลยุทธ์การ deploy</p></div>
       </div>
       <div class="file">
