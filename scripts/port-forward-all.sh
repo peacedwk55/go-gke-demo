@@ -28,7 +28,19 @@ PIDS=()
 cleanup() {
     printf '\n%sหยุด port-forward ทั้งหมด...%s\n' "$DIM" "$RESET"
     for pid in "${PIDS[@]:-}"; do
-        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+        # if-then, not `A && B || C`. Both read the same here, because the
+        # `|| true` was only ever meant to swallow a kill on a pid that has
+        # already gone. SC2015 flags the shape anyway and it is right to: that
+        # pattern really does run C when A succeeds and B fails.
+        #
+        # A comment must not open with the linter's own name, either. The first
+        # version of this note began with it, which made the line parse as a
+        # malformed directive and turned one info into two errors — the same
+        # shape as quoting the CI skip token in a commit message and thereby
+        # using it.
+        if [ -n "$pid" ]; then
+            kill "$pid" 2>/dev/null || true
+        fi
     done
     wait 2>/dev/null || true
 }

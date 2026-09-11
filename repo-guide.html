@@ -1091,7 +1091,7 @@ footer {
         <div class="f-desc"><p>เส้นแบ่งความเป็นเจ้าของ — <code>app/</code> และค่าใน overlay เป็นของทีมแอป ส่วน <code>.github/</code> <code>scripts/</code> <code>infra/</code> <code>k8s/base/</code> คือตัวประตูเอง เป็นของ platform</p><p><strong>ไฟล์นี้ไม่บังคับอะไรด้วยตัวเอง</strong> CODEOWNERS มีผลเฉพาะที่ต้องใช้ PR และบังคับ review — ruleset บน <code>main</code> คือสิ่งที่ทำให้มันมีผล</p></div>
       </div>
       <div class="file">
-        <div class="f-name">ci.yaml<em>548 บรรทัด</em></div>
+        <div class="f-name">ci.yaml<em>554 บรรทัด</em></div>
         <div class="f-desc">
           <p>4 job: <code>test</code> → <code>invariants</code> → <code>build</code> → <code>bump-manifest</code></p>
           <p>ลำดับภายใน <code>build</code> สำคัญ: build image ลง tarball ในเครื่องก่อน <strong>สแกน</strong> แล้วจึง push การสแกนหลัง push เป็นละคร เพราะ image ที่มีช่องโหว่ถูกดึงไปใช้ได้แล้ว</p><p><strong>DAST อยู่ในลำดับนี้ด้วย</strong> — <code>zap-baseline.py</code> รันต่อ image ตัวเดียวกันนั้น บน bridge network ในตัว runner หลัง Trivy และ<em>ก่อน</em> login เข้า Docker Hub เป็นประตูเดียวในไฟล์นี้ที่อ่าน HTTP จากสายจริง — เทสต์อ่าน handler, gosec อ่านซอร์ส, Trivy อ่านรายชื่อ package ไม่มีตัวไหนเห็น header ที่หายไประหว่าง handler กับ socket</p>
@@ -1229,7 +1229,7 @@ footer {
 
     <div class="files">
       <div class="file">
-        <div class="f-name">check-invariants.sh<em>391 บรรทัด</em></div>
+        <div class="f-name">check-invariants.sh<em>418 บรรทัด</em></div>
         <div class="f-desc">
           <p>กฎ 12 ข้อที่ครอบทั้งรีโป: ไม่มี <code>:latest</code>, ไม่มี resource ที่เป็น service-account key, ไม่มี <code>kubectl</code> ใน CI, prod ไม่อ้าง <code>docker.io</code>, ไม่มี <code>spec.replicas</code> ฮาร์ดโค้ด, ไม่มี Action ที่ pin กับ ref ที่ขยับได้, ทุกโฟลเดอร์ระดับบนมี README, HTML ที่เปิดเป็นไฟล์ประกาศ charset, ทุก action ref resolve ได้จริง, commit ที่ยังไม่ push ไม่มี skip token หลุด ไม่มี Terraform plan archive ถูก track และตัวเลขจำนวนบรรทัดในหน้านี้ตรงกับไฟล์จริง</p><p>ห้าข้อท้ายมาจากบั๊กจริงทั้งหมด ข้อที่ 9 เคยรายงานว่า ref ทุกตัวใช้ไม่ได้เพราะ curl ติด rate limit — มันสับสนระหว่าง <em>ตรวจไม่ได้</em> กับ <em>ไม่ถูกต้อง</em> ตอนนี้ให้ HTTP status ตัดสิน</p><p>ข้อที่ 12 <strong>จับไฟล์ของตัวเองได้ในรันแรกสุด</strong> — การเพิ่มมันเข้ามาทำให้ <code>check-invariants.sh</code> ยาวขึ้น และหน้านี้ยังบอกความยาวเดิมอยู่ ก่อนหน้านั้นตัวเลขในหน้านี้ผิด 23 จาก 73 ตัว ดริฟต์มาหลายเซสชันโดยไม่มีอะไรมาบอก</p>
           <p>ตอนเขียนแบบ inline ใน workflow มันไปจับชื่อ step ของตัวเองและ grep pattern ของตัวเองแล้ว fail การย้ายออกจากโฟลเดอร์ที่มันสแกนช่วยตัดปัญหานั้น — และเหตุผลที่ดีกว่าคือ <strong>สคริปต์เดียวกันรันบนเครื่องได้</strong> ดังนั้นถ้ารันในเครื่องผ่าน CI ก็จะผ่าน กฎที่ตรวจสอบได้เฉพาะตอน push คือกฎที่คนจะเรียนรู้วิธีเลี่ยง</p>

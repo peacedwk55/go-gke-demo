@@ -368,10 +368,37 @@ for cand in python3 python py; do
     fi
 done
 
+# SKIP is honest on a developer's machine, where a missing interpreter is a fact
+# about the machine. It is not honest in CI: the runner controls its own image, so
+# "could not run" there is a defect in this pipeline, and a green job that only
+# means "nothing failed" is the exact shape of the bug SKIP was added to prevent.
+# INVARIANTS_REQUIRE_TOOLING=1 (set in ci.yaml) turns those two skips into
+# failures.
+#
+# Deliberately NOT a blanket "any SKIP fails in CI" rule, and this is a
+# correction of an instinct that already cost real time once. Invariant 10 skips
+# on every CI run by construction — CI checks out a commit that is already
+# pushed, so there is never anything unpushed to inspect — and invariant 9 can
+# skip on a transient API rate limit. Failing on those would make the required
+# check unsatisfiable forever, which is the same mistake as putting a
+# path-filtered workflow in the required-checks list.
+STRICT_TOOLING="${INVARIANTS_REQUIRE_TOOLING:-}"
+
 if [ -z "$PYBIN" ]; then
-    printf '  %sSKIP%s  documented line counts match the files (no working Python)\n' "$RED" "$RESET"
+    if [ "$STRICT_TOOLING" = "1" ]; then
+        fail "documented line counts match the files"
+        printf '          %s\n' "no working Python interpreter, and INVARIANTS_REQUIRE_TOOLING=1"
+        printf '          %s\n' "tried: python3 python py — each must run 'print(1)', not merely exist"
+    else
+        printf '  %sSKIP%s  documented line counts match the files (no working Python)\n' "$RED" "$RESET"
+    fi
 elif [ ! -f repo-guide.html ]; then
-    printf '  %sSKIP%s  documented line counts match the files (repo-guide.html absent)\n' "$RED" "$RESET"
+    if [ "$STRICT_TOOLING" = "1" ]; then
+        fail "documented line counts match the files"
+        printf '          %s\n' "repo-guide.html is missing, and INVARIANTS_REQUIRE_TOOLING=1"
+    else
+        printf '  %sSKIP%s  documented line counts match the files (repo-guide.html absent)\n' "$RED" "$RESET"
+    fi
 else
     countout="$(PYTHONIOENCODING=utf-8 "$PYBIN" scripts/check-doc-counts.py 2>&1)" && countrc=0 || countrc=$?
     if [ "$countrc" -eq 0 ]; then
