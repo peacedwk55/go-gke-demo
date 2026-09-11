@@ -196,6 +196,12 @@ jobs:
           # check unverifiable in exactly the place it matters most. The
           # automatic token raises it to 5000/hour and needs no configuration.
           GITHUB_TOKEN: ${{ github.token }}
+          # A runner controls its own image, so "this check could not run here"
+          # is a defect rather than a fact of life. This turns invariant 12's
+          # tooling skips into failures, so a green job cannot mean "the checker
+          # never ran". Scoped to tooling on purpose: invariant 10 skips on every
+          # CI run by construction, and failing on that would block every merge.
+          INVARIANTS_REQUIRE_TOOLING: "1"
         run: ./scripts/check-invariants.sh
 
       # ── Secret scanning over the full history ────────────────────────────
